@@ -35,90 +35,22 @@
 
 include $(TOPDIR)/Make.defs
 
-# Include support for various drivers.  Each Make.defs file will add its
-# files to the source file list, add its DEPPATH info, and will add
-# the appropriate paths to the VPATH variable
-
-include analog/Make.defs
-include audio/Make.defs
-include bch/Make.defs
-include can/Make.defs
-include crypto/Make.defs
-include i2c/Make.defs
-include i2s/Make.defs
-include input/Make.defs
-include ioexpander/Make.defs
-include lcd/Make.defs
-include leds/Make.defs
-include loop/Make.defs
-include mmcsd/Make.defs
-include modem/Make.defs
-include mtd/Make.defs
-include eeprom/Make.defs
-include net/Make.defs
-include note/Make.defs
-include pipes/Make.defs
-include power/Make.defs
-include rptun/Make.defs
-include sensors/Make.defs
-include serial/Make.defs
-include spi/Make.defs
-include syslog/Make.defs
-include timers/Make.defs
-include usbdev/Make.defs
-include usbhost/Make.defs
-include usbmisc/Make.defs
-include usbmonitor/Make.defs
-include video/Make.defs
-include wireless/Make.defs
-include contactless/Make.defs
-include 1wire/Make.defs
-include rf/Make.defs
-#include cdev/Make.defs
 
 
-ifeq ($(CONFIG_SPECIFIC_DRIVERS),y)
-include platform/Make.defs
-endif
+CPPSRCS += CDev.cpp cdev_platform.cpp
 
-ifeq ($(CONFIG_DEV_SIMPLE_ADDRENV),y)
-  CSRCS += addrenv.c
-endif
-
-CSRCS += dev_null.c dev_zero.c
-
-#CPPSRCS +=  CDev.cpp cdev_platform.cpp
-#CPPSRCS += prueba.cpp
-
-ifneq ($(CONFIG_DISABLE_MOUNTPOINT),y)
-  CSRCS += ramdisk.c
-ifeq ($(CONFIG_DRVR_MKRD),y)
-  CSRCS += mkrd.c
-endif
-ifeq ($(CONFIG_DRVR_WRITEBUFFER),y)
-  CSRCS += rwbuffer.c
-else
-ifeq ($(CONFIG_DRVR_READAHEAD),y)
-  CSRCS += rwbuffer.c
-endif
-endif
-endif
+CXXFLAGS += ${shell $(INCDIR) "$(CXX)" $(TOPDIR)$(DELIM)libs$(DELIM)cdev}
 
 AOBJS = $(ASRCS:.S=$(OBJEXT))
 COBJS = $(CSRCS:.c=$(OBJEXT))
-
-###----
-#SRCS = $(ASRCS) $(CSRCS)
-#OBJS = $(AOBJS) $(COBJS)
 
 CXXOBJS = $(CXXSRCS:.cxx=$(OBJEXT))
 CPPOBJS = $(CPPSRCS:.cpp=$(OBJEXT))
 
 SRCS = $(ASRCS) $(CSRCS) $(CXXSRCS) $(CPPSRCS)
 OBJS = $(AOBJS) $(COBJS) $(CXXOBJS) $(CPPOBJS)
-###----
 
-BIN = libdrivers$(LIBEXT)
+BIN = libcdev$(LIBEXT)
 
 all: $(BIN)
 .PHONY: depend clean distclean
@@ -130,19 +62,17 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 
-###----
 $(CXXOBJS): %$(OBJEXT): %.cxx
 	$(call COMPILEXX, $<, $@)
 
 $(CPPOBJS): %$(OBJEXT): %.cpp
 	$(call COMPILEXX, $<, $@)
-###----
 
 $(BIN): $(OBJS)
 	$(call ARCHIVE, $@, $(OBJS))
 
 .depend: Makefile $(SRCS) $(TOPDIR)$(DELIM).config
-	$(Q) $(MKDEP) $(DEPPATH) "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make.dep
+	$(Q) $(MKDEP) $(DEPPATH) "$(CXX)" -- $(CXXFLAGS) -- $(SRCS) >Make.dep
 	$(Q) touch $@
 
 depend: .depend

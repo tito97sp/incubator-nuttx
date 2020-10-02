@@ -81,22 +81,21 @@ CONTEXTDIRS = boards fs $(APPDIR)
 CLEANDIRS += pass1
 
 ifeq ($(CONFIG_BUILD_FLAT),y)
-
-KERNDEPDIRS += libs$(DELIM)libc mm
-ifeq ($(CONFIG_HAVE_CXX),y)
-KERNDEPDIRS += libs$(DELIM)libxx
-else
-CLEANDIRS += libs$(DELIM)libxx
-endif
+KERNDEPDIRS += libs$(DELIM)libc mm 
+  ifeq ($(CONFIG_HAVE_CXX),y)
+  KERNDEPDIRS += libs$(DELIM)libxx
+  else
+  CLEANDIRS += libs$(DELIM)libxx
+  endif
 
 else
 
 USERDEPDIRS += libs$(DELIM)libc mm
-ifeq ($(CONFIG_HAVE_CXX),y)
-USERDEPDIRS += libs$(DELIM)libxx
-else
-CLEANDIRS += libs$(DELIM)libxx
-endif
+  ifeq ($(CONFIG_HAVE_CXX),y)
+  USERDEPDIRS += libs$(DELIM)libxx
+  else
+  CLEANDIRS += libs$(DELIM)libxx
+  endif
 
 endif
 
@@ -124,11 +123,11 @@ CLEANDIRS += graphics
 endif
 
 ifeq ($(CONFIG_NXFONTS),y)
-ifeq ($(CONFIG_BUILD_FLAT),y)
-KERNDEPDIRS += libs$(DELIM)libnx
-else
-USERDEPDIRS += libs$(DELIM)libnx
-endif
+  ifeq ($(CONFIG_BUILD_FLAT),y)
+  KERNDEPDIRS += libs$(DELIM)libnx
+  else
+  USERDEPDIRS += libs$(DELIM)libnx
+  endif
 CONTEXTDIRS += libs$(DELIM)libnx
 else
 CLEANDIRS += libs$(DELIM)libnx
@@ -177,5 +176,17 @@ KERNDEPDIRS += openamp
 else
 CLEANDIRS += openamp
 endif
+
+
+ifeq ($(CONFIG_CDEV),y)
+  ifeq ($(CONFIG_BUILD_FLAT),y)
+  KERNDEPDIRS += libs$(DELIM)cdev
+  else
+  USERDEPDIRS += libs$(DELIM)cdev
+  endif
+else
+CLEANDIRS += libs$(DELIM)cdev
+endif
+
 
 CLEANDIRS += $(KERNDEPDIRS) $(USERDEPDIRS)

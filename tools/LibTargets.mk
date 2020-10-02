@@ -52,11 +52,18 @@ libs$(DELIM)libnx$(DELIM)libknx$(LIBEXT): pass2dep
 staging$(DELIM)libknx$(LIBEXT): libs$(DELIM)libnx$(DELIM)libknx$(LIBEXT)
 	$(Q) $(call INSTALL_LIB,$<,$@)
 
+libs$(DELIM)cdev$(DELIM)libcdev$(LIBEXT): pass2dep
+	$(Q) $(MAKE) -C libs$(DELIM)cdev libcdev$(LIBEXT) EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)"
+
+staging$(DELIM)libcdev$(LIBEXT): libs$(DELIM)cdev$(DELIM)libcdev$(LIBEXT)
+	$(Q) $(call INSTALL_LIB,$<,$@)
+
 mm$(DELIM)libkmm$(LIBEXT): pass2dep
 	$(Q) $(MAKE) -C mm libkmm$(LIBEXT) EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)"
 
 staging$(DELIM)libkmm$(LIBEXT): mm$(DELIM)libkmm$(LIBEXT)
 	$(Q) $(call INSTALL_LIB,$<,$@)
+
 
 $(ARCH_SRC)$(DELIM)libkarch$(LIBEXT): pass2dep
 	$(Q) $(MAKE) -C $(ARCH_SRC) libkarch$(LIBEXT) EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)"
@@ -160,6 +167,8 @@ syscall$(DELIM)libwraps$(LIBEXT): pass2dep
 staging$(DELIM)libwraps$(LIBEXT): syscall$(DELIM)libwraps$(LIBEXT)
 	$(Q) $(call INSTALL_LIB,$<,$@)
 
+
+
 # Special case
 
 ifeq ($(CONFIG_BUILD_FLAT),y)
@@ -232,3 +241,5 @@ syscall$(DELIM)libproxies$(LIBEXT): pass1dep
 
 staging$(DELIM)libproxies$(LIBEXT): syscall$(DELIM)libproxies$(LIBEXT)
 	$(Q) $(call INSTALL_LIB,$<,$@)
+
+
