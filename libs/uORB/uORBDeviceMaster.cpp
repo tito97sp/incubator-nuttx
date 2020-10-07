@@ -31,13 +31,13 @@
  *
  ****************************************************************************/
 
-#include "./include/uORBDeviceMaster.hpp" 
-#include "./include/uORBDeviceNode.hpp"
-#include "./include/uORBManager.hpp"
-#include "./include/uORBUtils.hpp"
+#include <nuttx/uORB/uORBDeviceMaster.hpp>
+#include <nuttx/uORB/uORBDeviceNode.hpp>
+#include <nuttx/uORB/uORBManager.hpp>
+#include <nuttx/uORB/uORBUtils.hpp>
 
 #ifdef ORB_COMMUNICATOR
-#include "uORBCommunicator.hpp"
+#include <nuttx/uORB/uORBCommunicator.hpp>
 #endif /* ORB_COMMUNICATOR */
 
 #include <nuttx/semaphore.h>

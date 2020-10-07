@@ -37,11 +37,9 @@
 #include <stdarg.h>
 #include <fcntl.h>
 
-
-
-#include "./include/uORBDeviceNode.hpp"
-#include "./include/uORBUtils.hpp"
-#include "./include/uORBManager.hpp"
+#include <nuttx/uORB/uORBDeviceNode.hpp>
+#include <nuttx/uORB/uORBUtils.hpp>
+#include <nuttx/uORB/uORBManager.hpp>
 
 uORB::Manager *uORB::Manager::_Instance = nullptr;
 
@@ -112,7 +110,7 @@ int uORB::Manager::orb_exists(const struct orb_metadata *meta, int instance)
 	}
 
 	if (get_device_master()) {
-		uORBDeviceNode *node = _device_master->getDeviceNode(meta, instance);
+		uORB::DeviceNode *node = _device_master->getDeviceNode(meta, instance);
 
 		if (node != nullptr) {
 			if (node->is_advertised()) {
@@ -249,7 +247,7 @@ int uORB::Manager::orb_unadvertise(orb_advert_t handle)
 
 #endif /* ORB_USE_PUBLISHER_RULES */
 
-	return uORBDeviceNode::unadvertise(handle);
+	return uORB::DeviceNode::unadvertise(handle);
 }
 
 int uORB::Manager::orb_subscribe(const struct orb_metadata *meta)
@@ -278,7 +276,7 @@ int uORB::Manager::orb_publish(const struct orb_metadata *meta, orb_advert_t han
 
 #endif /* ORB_USE_PUBLISHER_RULES */
 
-	return uORBDeviceNode::publish(meta, handle, data);
+	return uORB::DeviceNode::publish(meta, handle, data);
 }
 
 int uORB::Manager::orb_copy(const struct orb_metadata *meta, int handle, void *buffer)
@@ -341,7 +339,7 @@ int uORB::Manager::node_open(const struct orb_metadata *meta, bool advertiser, i
 		 */
 		ret = uORB::Utils::node_mkpath(path, meta, instance);
 
-		if (ret != OK) {
+		if (ret != 0) {
 			errno = -ret;
 			return -1;
 		}

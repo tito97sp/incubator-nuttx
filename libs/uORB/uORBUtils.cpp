@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2020 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2012-2015 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,62 +31,42 @@
  *
  ****************************************************************************/
 
-#pragma once
+#include <nuttx/uORB/uORBUtils.hpp>
+#include <stdio.h>
+#include <errno.h>
 
-#include <stddef.h>
-#include <atomic>
-
-
-template <size_t N>
-class AtomicBitset
+int uORB::Utils::node_mkpath(char *buf, const struct orb_metadata *meta, int *instance)
 {
-public:
-	AtomicBitset() = default;
+	unsigned len;
 
-	size_t count() const
-	{
-		size_t total = 0;
+	unsigned index = 0;
 
-		for (const auto &x : _data) {
-			uint32_t y = x.load();
-
-			while (y) {
-				total += y & 1;
-				y >>= 1;
-			}
-		}
-
-		return total;
+	if (instance != nullptr) {
+		index = *instance;
 	}
 
-	size_t size() const { return N; }
+	len = snprintf(buf, orb_maxpath, "/%s/%s%d", "obj", meta->o_name, index);
 
-	bool operator[](size_t position) const
-	{
-		return _data[array_index(position)].load() & element_mask(position);
+	if (len >= orb_maxpath) {
+		return -ENAMETOOLONG;
 	}
 
-	void set(size_t pos, bool val = true)
-	{
-		const uint32_t bitmask = element_mask(pos);
+	return 0;
+}
 
-		if (val) {
-			_data[array_index(pos)].fetch_or(bitmask);
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+int uORB::Utils::node_mkpath(char *buf, const char *orbMsgName)
+{
+	unsigned len;
 
-		} else {
-			_data[array_index(pos)].fetch_and(~bitmask);
-		}
+	unsigned index = 0;
+
+	len = snprintf(buf, orb_maxpath, "/%s/%s%d", "obj", orbMsgName, index);
+
+	if (len >= orb_maxpath) {
+		return -ENAMETOOLONG;
 	}
 
-private:
-	static constexpr uint8_t BITS_PER_ELEMENT = 32;
-	static constexpr size_t ARRAY_SIZE = ((N % BITS_PER_ELEMENT) == 0) ? (N / BITS_PER_ELEMENT) :
-					     (N / BITS_PER_ELEMENT + 1);
-	static constexpr size_t ALLOCATED_BITS = ARRAY_SIZE * BITS_PER_ELEMENT;
-
-	size_t array_index(size_t position) const { return position / BITS_PER_ELEMENT; }
-	uint32_t element_mask(size_t position) const { return (1 << (position % BITS_PER_ELEMENT)); }
-
-	std::atomic<uint32_t> _data[ARRAY_SIZE];
-};
-
+	return 0;
+}

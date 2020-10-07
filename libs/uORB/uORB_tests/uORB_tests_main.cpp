@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2020 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2012-2015 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,62 +31,55 @@
  *
  ****************************************************************************/
 
-#pragma once
+#include <string.h>
 
-#include <stddef.h>
-#include <atomic>
+#include "uORBTest_UnitTest.hpp"
 
+extern "C" { __EXPORT int uorb_tests_main(int argc, char *argv[]); }
 
-template <size_t N>
-class AtomicBitset
+static void usage()
 {
-public:
-	AtomicBitset() = default;
+	PX4_INFO("Usage: uorb_tests [latency_test]");
+}
 
-	size_t count() const
-	{
-		size_t total = 0;
+int
+uorb_tests_main(int argc, char *argv[])
+{
+	/*
+	 * Test the driver/device.
+	 */
+	if (argc == 1) {
+		uORBTest::UnitTest &t = uORBTest::UnitTest::instance();
+		int rc = t.test();
 
-		for (const auto &x : _data) {
-			uint32_t y = x.load();
-
-			while (y) {
-				total += y & 1;
-				y >>= 1;
-			}
-		}
-
-		return total;
-	}
-
-	size_t size() const { return N; }
-
-	bool operator[](size_t position) const
-	{
-		return _data[array_index(position)].load() & element_mask(position);
-	}
-
-	void set(size_t pos, bool val = true)
-	{
-		const uint32_t bitmask = element_mask(pos);
-
-		if (val) {
-			_data[array_index(pos)].fetch_or(bitmask);
+		if (rc == OK) {
+			PX4_INFO("PASS");
+			return 0;
 
 		} else {
-			_data[array_index(pos)].fetch_and(~bitmask);
+			PX4_ERR("FAIL");
+			return -1;
 		}
 	}
 
-private:
-	static constexpr uint8_t BITS_PER_ELEMENT = 32;
-	static constexpr size_t ARRAY_SIZE = ((N % BITS_PER_ELEMENT) == 0) ? (N / BITS_PER_ELEMENT) :
-					     (N / BITS_PER_ELEMENT + 1);
-	static constexpr size_t ALLOCATED_BITS = ARRAY_SIZE * BITS_PER_ELEMENT;
+	/*
+	 * Test the latency.
+	 */
+	if (argc > 1 && !strcmp(argv[1], "latency_test")) {
 
-	size_t array_index(size_t position) const { return position / BITS_PER_ELEMENT; }
-	uint32_t element_mask(size_t position) const { return (1 << (position % BITS_PER_ELEMENT)); }
+		uORBTest::UnitTest &t = uORBTest::UnitTest::instance();
 
-	std::atomic<uint32_t> _data[ARRAY_SIZE];
-};
+		if (argc > 2 && !strcmp(argv[2], "medium")) {
+			return t.latency_test<orb_test_medium_s>(ORB_ID(orb_test_medium), true);
 
+		} else if (argc > 2 && !strcmp(argv[2], "large")) {
+			return t.latency_test<orb_test_large_s>(ORB_ID(orb_test_large), true);
+
+		} else {
+			return t.latency_test<orb_test_s>(ORB_ID(orb_test), true);
+		}
+	}
+
+	usage();
+	return -EINVAL;
+}

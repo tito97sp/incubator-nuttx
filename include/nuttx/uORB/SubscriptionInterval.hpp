@@ -46,6 +46,8 @@
 
 #include "Subscription.hpp"
 
+#include "Limits.hpp"
+
 namespace uORB
 {
 
@@ -121,6 +123,7 @@ public:
 	bool copy(void *dst)
 	{
 		if (_subscription.copy(dst)) {
+			//const hrtime_t now = gethrtime();
 			const hrt_abstime now = hrt_absolute_time();
 			// shift last update time forward, but don't let it get further behind than the interval
 			_last_update = math::constrain(_last_update + _interval_us, now - _interval_us, now);

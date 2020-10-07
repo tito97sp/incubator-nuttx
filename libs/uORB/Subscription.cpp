@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2020 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2012-2019 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,62 +31,87 @@
  *
  ****************************************************************************/
 
-#pragma once
+/**
+ * @file Subscription.cpp
+ *
+ */
 
-#include <stddef.h>
-#include <atomic>
+#include 	<nuttx/uORB/Subscription.hpp>
+#include  	<math.h>
+//#include <px4_platform_common/defines.h>
 
-
-template <size_t N>
-class AtomicBitset
+namespace uORB
 {
-public:
-	AtomicBitset() = default;
 
-	size_t count() const
-	{
-		size_t total = 0;
+bool Subscription::subscribe()
+{
+	// check if already subscribed
+	if (_node != nullptr) {
+		return true;
+	}
 
-		for (const auto &x : _data) {
-			uint32_t y = x.load();
+	if (_orb_id != ORB_ID::INVALID) {
 
-			while (y) {
-				total += y & 1;
-				y >>= 1;
+		DeviceMaster *device_master = uORB::Manager::get_instance()->get_device_master();
+
+		if (device_master != nullptr) {
+
+			if (!device_master->deviceNodeExists(_orb_id, _instance)) {
+				return false;
+			}
+
+			uORB::DeviceNode *node = device_master->getDeviceNode(get_topic(), _instance);
+
+			if (node != nullptr) {
+				_node = node;
+				_node->add_internal_subscriber();
+
+				const unsigned curr_gen = _node->published_message_count();
+
+				// If there were any previous publications allow the subscriber to read them
+				_last_generation = curr_gen - std::min((unsigned)_node->get_queue_size(), curr_gen);
+
+				return true;
 			}
 		}
-
-		return total;
 	}
 
-	size_t size() const { return N; }
+	return false;
+}
 
-	bool operator[](size_t position) const
-	{
-		return _data[array_index(position)].load() & element_mask(position);
+void Subscription::unsubscribe()
+{
+	if (_node != nullptr) {
+		_node->remove_internal_subscriber();
 	}
 
-	void set(size_t pos, bool val = true)
-	{
-		const uint32_t bitmask = element_mask(pos);
+	_node = nullptr;
+	_last_generation = 0;
+}
 
-		if (val) {
-			_data[array_index(pos)].fetch_or(bitmask);
+bool Subscription::ChangeInstance(uint8_t instance)
+{
+	if (instance != _instance) {
+		DeviceMaster *device_master = uORB::Manager::get_instance()->get_device_master();
 
-		} else {
-			_data[array_index(pos)].fetch_and(~bitmask);
+		if (device_master != nullptr) {
+			if (!device_master->deviceNodeExists(_orb_id, _instance)) {
+				return false;
+			}
+
+			// if desired new instance exists, unsubscribe from current
+			unsubscribe();
+			_instance = instance;
+			subscribe();
+			return true;
 		}
+
+	} else {
+		// already on desired index
+		return true;
 	}
 
-private:
-	static constexpr uint8_t BITS_PER_ELEMENT = 32;
-	static constexpr size_t ARRAY_SIZE = ((N % BITS_PER_ELEMENT) == 0) ? (N / BITS_PER_ELEMENT) :
-					     (N / BITS_PER_ELEMENT + 1);
-	static constexpr size_t ALLOCATED_BITS = ARRAY_SIZE * BITS_PER_ELEMENT;
+	return false;
+}
 
-	size_t array_index(size_t position) const { return position / BITS_PER_ELEMENT; }
-	uint32_t element_mask(size_t position) const { return (1 << (position % BITS_PER_ELEMENT)); }
-
-	std::atomic<uint32_t> _data[ARRAY_SIZE];
-};
-
+} // namespace uORB

@@ -36,9 +36,9 @@
  * A lightweight object broker.
  */
 
-#include "./include/uORB.h"
-#include "./include/uORBManager.hpp"
-#include "./include/uORBCommon.hpp"
+#include <nuttx/uORB/uORB.h>
+#include <nuttx/uORB/uORBManager.hpp>
+#include <nuttx/uORB/uORBCommon.hpp>
 
 orb_advert_t orb_advertise(const struct orb_metadata *meta, const void *data)
 {

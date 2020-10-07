@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2020 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2013 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,62 +31,78 @@
  *
  ****************************************************************************/
 
+/**
+ * @file Limits.hpp
+ *
+ * Limiting / constrain helper functions
+ */
+
 #pragma once
 
-#include <stddef.h>
-#include <atomic>
+#include <float.h>
+#include <math.h>
+#include <stdint.h>
 
+#ifndef MATH_PI
+#define MATH_PI		3.141592653589793238462643383280
+#endif
 
-template <size_t N>
-class AtomicBitset
+namespace math
 {
-public:
-	AtomicBitset() = default;
 
-	size_t count() const
-	{
-		size_t total = 0;
+template<typename _Tp>
+constexpr _Tp min(_Tp a, _Tp b)
+{
+	return (a < b) ? a : b;
+}
 
-		for (const auto &x : _data) {
-			uint32_t y = x.load();
+template<typename _Tp>
+constexpr _Tp max(_Tp a, _Tp b)
+{
+	return (a > b) ? a : b;
+}
 
-			while (y) {
-				total += y & 1;
-				y >>= 1;
-			}
-		}
+template<typename _Tp>
+constexpr _Tp constrain(_Tp val, _Tp min_val, _Tp max_val)
+{
+	return (val < min_val) ? min_val : ((val > max_val) ? max_val : val);
+}
 
-		return total;
-	}
+/** Constrain float values to valid values for int16_t.
+ * Invalid values are just clipped to be in the range for int16_t. */
+constexpr int16_t constrainFloatToInt16(float value)
+{
+	return (int16_t)math::constrain(value, (float)INT16_MIN, (float)INT16_MAX);
+}
 
-	size_t size() const { return N; }
+template<typename _Tp>
+constexpr bool isInRange(_Tp val, _Tp min_val, _Tp max_val)
+{
+	return (min_val <= val) && (val <= max_val);
+}
 
-	bool operator[](size_t position) const
-	{
-		return _data[array_index(position)].load() & element_mask(position);
-	}
+template<typename T>
+constexpr T radians(T degrees)
+{
+	return degrees * (static_cast<T>(MATH_PI) / static_cast<T>(180));
+}
 
-	void set(size_t pos, bool val = true)
-	{
-		const uint32_t bitmask = element_mask(pos);
+template<typename T>
+constexpr T degrees(T radians)
+{
+	return radians * (static_cast<T>(180) / static_cast<T>(MATH_PI));
+}
 
-		if (val) {
-			_data[array_index(pos)].fetch_or(bitmask);
+/** Safe way to check if float is zero */
+inline bool isZero(float val)
+{
+	return fabsf(val - 0.0f) < FLT_EPSILON;
+}
 
-		} else {
-			_data[array_index(pos)].fetch_and(~bitmask);
-		}
-	}
+/** Safe way to check if double is zero */
+inline bool isZero(double val)
+{
+	return fabs(val - 0.0) < DBL_EPSILON;
+}
 
-private:
-	static constexpr uint8_t BITS_PER_ELEMENT = 32;
-	static constexpr size_t ARRAY_SIZE = ((N % BITS_PER_ELEMENT) == 0) ? (N / BITS_PER_ELEMENT) :
-					     (N / BITS_PER_ELEMENT + 1);
-	static constexpr size_t ALLOCATED_BITS = ARRAY_SIZE * BITS_PER_ELEMENT;
-
-	size_t array_index(size_t position) const { return position / BITS_PER_ELEMENT; }
-	uint32_t element_mask(size_t position) const { return (1 << (position % BITS_PER_ELEMENT)); }
-
-	std::atomic<uint32_t> _data[ARRAY_SIZE];
-};
-
+}

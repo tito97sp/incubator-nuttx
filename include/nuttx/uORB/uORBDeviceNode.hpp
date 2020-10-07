@@ -1,17 +1,45 @@
-#ifndef __APPS_INCLUDE_UORB_H
-#define __APPS_INCLUDE_UORB_H
+/****************************************************************************
+ *
+ *   Copyright (c) 2012-2016 PX4 Development Team. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name PX4 nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ ****************************************************************************/
 
-#include <nuttx/config.h>
-#include <nuttx/compiler.h>
+#pragma once
 
-#include <nuttx/semaphore.h>
-#include <nuttx/fs/ioctl.h>
-#include <atomic>
+#include "uORBCommon.hpp"
+#include "uORBDeviceMaster.hpp"
 
-#include "uORB.h"
-//#include "SubscriptionInterval.hpp"
-//#include "SubscriptionCallback.hpp"
+#include <nuttx/cdev/CDev.hpp>
 
+#include "containers/IntrusiveSortedList.hpp"
+#include "containers/List.hpp"
 
 namespace uORB
 {
@@ -21,21 +49,65 @@ class Manager;
 class SubscriptionCallback;
 }
 
-typedef uint64_t hrt_abstime;
-
-//static uORB::SubscriptionInterval *filp_to_subscription(file *filp) { return static_cast<uORB::SubscriptionInterval *>(filp->f_priv); }
-
-class uORB::DeviceNode
+/**
+ * Per-object device instance.
+ */
+class uORB::DeviceNode : public cdev::CDev, public IntrusiveSortedListNode<uORB::DeviceNode *>
 {
-  public:
+public:
 	DeviceNode(const struct orb_metadata *meta, const uint8_t instance, const char *path, uint8_t queue_size = 1);
 	virtual ~DeviceNode();
 
 	// no copy, assignment, move, move assignment
-	DeviceNode(const uORB::DeviceNode &) = delete;
-	DeviceNode &operator=(const uORB::DeviceNode &) = delete;
-	DeviceNode(uORB::DeviceNode &&) = delete;
-	DeviceNode &operator=(uORB::DeviceNode &&) = delete;
+	DeviceNode(const DeviceNode &) = delete;
+	DeviceNode &operator=(const DeviceNode &) = delete;
+	DeviceNode(DeviceNode &&) = delete;
+	DeviceNode &operator=(DeviceNode &&) = delete;
+
+	bool operator<=(const DeviceNode &rhs) const { return (strcmp(get_devname(), rhs.get_devname()) <= 0); }
+
+	/**
+	 * Method to create a subscriber instance and return the struct
+	 * pointing to the subscriber as a file pointer.
+	 */
+	int open(file *filp) override;
+
+	/**
+	 * Method to close a subscriber for this topic.
+	 */
+	int close(file *filp) override;
+
+	/**
+	 * reads data from a subscriber node to the buffer provided.
+	 * @param filp
+	 *   The subscriber from which the data needs to be read from.
+	 * @param buffer
+	 *   The buffer into which the data is read into.
+	 * @param buflen
+	 *   the length of the buffer
+	 * @return
+	 *   ssize_t the number of bytes read.
+	 */
+	ssize_t read(file *filp, char *buffer, size_t buflen) override;
+
+	/**
+	 * writes the published data to the internal buffer to be read by
+	 * subscribers later.
+	 * @param filp
+	 *   the subscriber; this is not used.
+	 * @param buffer
+	 *   The buffer for the input data
+	 * @param buflen
+	 *   the length of the buffer.
+	 * @return ssize_t
+	 *   The number of bytes that are written
+	 */
+	ssize_t write(file *filp, const char *buffer, size_t buflen) override;
+
+	/**
+	 * IOCTL control for the subscriber.
+	 */
+	int ioctl(file *filp, int cmd, unsigned long arg) override;
 
 	/**
 	 * Method to publish a data to this node.
@@ -45,8 +117,8 @@ class uORB::DeviceNode
 	static int        unadvertise(orb_advert_t handle);
 
 #ifdef ORB_COMMUNICATOR
-	static int16_t topic_advertised(const orb_metadata *meta, int priority);
-	//static int16_t topic_unadvertised(const orb_metadata *meta, int priority);
+	static int16_t topic_advertised(const orb_metadata *meta);
+	//static int16_t topic_unadvertised(const orb_metadata *meta);
 
 	/**
 	 * processes a request for add subscription from remote
@@ -105,9 +177,9 @@ class uORB::DeviceNode
 	int update_queue_size(unsigned int queue_size);
 
 	/**
-	 * Print statistics (nr of lost messages)
-	 * @param reset if true, reset statistics afterwards
-	 * @return true if printed something, false otherwise (if no lost messages)
+	 * Print statistics
+	 * @param max_topic_length max topic name length for printing
+	 * @return true if printed something, false otherwise
 	 */
 	bool print_statistics(int max_topic_length);
 
@@ -115,18 +187,15 @@ class uORB::DeviceNode
 
 	int8_t subscriber_count() const { return _subscriber_count; }
 
-	uint32_t lost_message_count() const { return _lost_messages; }
-
 	unsigned published_message_count() const { return _generation.load(); }
 
 	const orb_metadata *get_meta() const { return _meta; }
 
+	ORB_ID id() const { return static_cast<ORB_ID>(_meta->o_id); }
+
 	const char *get_name() const { return _meta->o_name; }
 
 	uint8_t get_instance() const { return _instance; }
-
-	int get_priority() const { return _priority; }
-	void set_priority(uint8_t priority) { _priority = priority; }
 
 	/**
 	 * Copies data and the corresponding generation
@@ -141,107 +210,28 @@ class uORB::DeviceNode
 	 */
 	bool copy(void *dst, unsigned &generation);
 
-	/*TODO::Make it a IOCTL operation*/
 	// add item to list of work items to schedule on node update
 	bool register_callback(SubscriptionCallback *callback_sub);
+
 	// remove item from list of work items
 	void unregister_callback(SubscriptionCallback *callback_sub);
 
+protected:
 
-	/**
-	 * Method to create a subscriber instance and return the struct
-	 * pointing to the subscriber as a file pointer.
-	 */
-	int open(FAR struct file *filep);
+	pollevent_t poll_state(file *filp) override;
 
-	/**
-	 * Method to close a subscriber for this topic.
-	 */
-	int close(FAR struct file *filep);
-
-	/**
-	 * reads data from a subscriber node to the buffer provided.
-	 * @param filp
-	 *   The subscriber from which the data needs to be read from.
-	 * @param buffer
-	 *   The buffer into which the data is read into.
-	 * @param buflen
-	 *   the length of the buffer
-	 * @return
-	 *   ssize_t the number of bytes read.
-	 */
-	ssize_t read(FAR struct file *filep, FAR char *buffer, size_t buflen);
-
-	/**
-	 * writes the published data to the internal buffer to be read by
-	 * subscribers later.
-	 * @param filp
-	 *   the subscriber; this is not used.
-	 * @param buffer
-	 *   The buffer for the input data
-	 * @param buflen
-	 *   the length of the buffer.
-	 * @return ssize_t
-	 *   The number of bytes that are written
-	 */
-	ssize_t write(FAR struct file *filep, FAR const char *buffer, size_t buflen);
-
-	/**
-	 * IOCTL control for the subscriber.
-	 */
-	int ioctl(FAR struct file *filep, int cmd, unsigned long arg);
-
-	int poll(FAR struct file *filep, struct pollfd *fds, bool setup);
+	void poll_notify_one(struct pollfd *fds, pollevent_t events) override;
 
 private:
 
-	struct UpdateIntervalData {
-		uint64_t last_update{0}; /**< time at which the last update was provided, used when update_interval is nonzero */
-		unsigned interval{0}; /**< if nonzero minimum interval between updates */
-	};
-
-	struct SubscriberData {
-		~SubscriberData() { if (update_interval) { delete (update_interval); } }
-
-		unsigned generation{0}; /**< last generation the subscriber has seen */
-		UpdateIntervalData *update_interval{nullptr}; /**< if null, no update interval */
-	};
-
 	const orb_metadata *_meta; /**< object metadata information */
-	const uint8_t _instance; /**< orb multi instance identifier */
+
 	uint8_t     *_data{nullptr};   /**< allocated object buffer */
-	hrt_abstime   _last_update{0}; /**< time the object was last updated */
 	std::atomic<unsigned>  _generation{0};  /**< object generation count */
-	//List<uORB::SubscriptionCallback *>	_callbacks;
-	uint8_t   _priority;  /**< priority of the topic */
+	List<uORB::SubscriptionCallback *>	_callbacks;
+
+	const uint8_t _instance; /**< orb multi instance identifier */
 	bool _advertised{false};  /**< has ever been advertised (not necessarily published data yet) */
 	uint8_t _queue_size; /**< maximum number of elements in the queue */
 	int8_t _subscriber_count{0};
-
-	// statistics
-	uint32_t _lost_messages = 0; /**< nr of lost messages for all subscribers. If two subscribers lose the same
-					message, it is counted as two. */
-
-	//inline static SubscriberData    *filp_to_sd(cdev::file_t *filp);
-
-	/**
-	 * Check whether a topic appears updated to a subscriber.
-	 *
-	 * Lock must already be held when calling this.
-	 *
-	 * @param sd    The subscriber for whom to check.
-	 * @return    True if the topic should appear updated to the subscriber
-	 */
-	bool      appears_updated(SubscriberData *sd);
-
-protected:
-	sem_t _lock;
-	void lock(){do {} while (sem_wait(&_lock) != 0);}
-	void unlock(){sem_post(&_lock);}
-	/* data */
 };
-
-int uORBNodeDevice_register(FAR const char *path);
-
-
-#endif /*__APPS_INCLUDE_UORB_H */

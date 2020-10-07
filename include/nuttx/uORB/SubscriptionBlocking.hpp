@@ -35,8 +35,9 @@
 
 #include "SubscriptionCallback.hpp"
 
-#include <containers/LockGuard.hpp>
-#include <px4_time.h>
+#include "containers/LockGuard.hpp"
+#include <time.h>
+//.#include <px4_time.h>
 
 namespace uORB
 {
@@ -61,7 +62,7 @@ public:
 		int ret_attr_init = pthread_mutexattr_init(&attr);
 
 		if (ret_attr_init != 0) {
-			PX4_ERR("pthread_mutexattr_init failed, status=%d", ret_attr_init);
+			//PX4_ERR("pthread_mutexattr_init failed, status=%d", ret_attr_init);
 		}
 
 #if defined(PTHREAD_PRIO_NONE)
@@ -70,7 +71,7 @@ public:
 		int ret_mutexattr_settype = pthread_mutexattr_settype(&attr, PTHREAD_PRIO_NONE);
 
 		if (ret_mutexattr_settype != 0) {
-			PX4_ERR("pthread_mutexattr_settype failed, status=%d", ret_mutexattr_settype);
+			//PX4_ERR("pthread_mutexattr_settype failed, status=%d", ret_mutexattr_settype);
 		}
 
 #endif // PTHREAD_PRIO_NONE
@@ -79,7 +80,7 @@ public:
 		int ret_mutex_init = pthread_mutex_init(&_mutex, &attr);
 
 		if (ret_mutex_init != 0) {
-			PX4_ERR("pthread_mutex_init failed, status=%d", ret_mutex_init);
+			//PX4_ERR("pthread_mutex_init failed, status=%d", ret_mutex_init);
 		}
 	}
 
@@ -129,14 +130,15 @@ public:
 
 				// Calculate an absolute time in the future
 				struct timespec ts;
-				px4_clock_gettime(CLOCK_REALTIME, &ts);
+				
+				clock_gettime(CLOCK_REALTIME, &ts);
 				uint64_t nsecs = ts.tv_nsec + (timeout_us * 1000);
 				static constexpr unsigned billion = (1000 * 1000 * 1000);
 				ts.tv_sec += nsecs / billion;
 				nsecs -= (nsecs / billion) * billion;
 				ts.tv_nsec = nsecs;
 
-				if (px4_pthread_cond_timedwait(&_cv, &_mutex, &ts) == 0) {
+				if (pthread_cond_timedwait(&_cv, &_mutex, &ts) == 0) {
 					return updated();
 				}
 			}
