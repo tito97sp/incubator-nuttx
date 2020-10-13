@@ -68,7 +68,6 @@ depend: .autogen .depend
 
 clean:
 	$(Q) $(MAKE) -C bin  clean
-	#$(Q) $(MAKE) -C zoneinfo clean BIN=$(BIN)
 	$(call DELFILE, $(BIN))
 	$(call DELFILE, $(uorb_sources_path))
 	$(call DELFILE, $(uorb_headers_path))
@@ -77,10 +76,9 @@ clean:
 
 distclean: clean
 	$(Q) $(MAKE) -C bin  distclean
-	#$(Q) $(MAKE) -C zoneinfo distclean BIN=$(BIN)
 	$(call DELFILE, bin/Make.dep)
 	$(call DELFILE, Make.dep)
 	$(call DELFILE, .depend)
 
 -include bin/Make.dep
--include Make.depa
+-include Make.dep
