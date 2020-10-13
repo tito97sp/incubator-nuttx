@@ -39,6 +39,8 @@
  * API for the uORB lightweight object broker.
  */
 
+#include <sys/config.h>
+
 #include <sys/types.h>
 #include <sys/cdefs.h>
 #include <stdint.h>

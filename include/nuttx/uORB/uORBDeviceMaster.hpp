@@ -34,10 +34,12 @@
 #pragma once
 
 #include <stdint.h>
+#include <nuttx/time.h>
 
 #include "uORBDeviceNode.hpp"
 #include "uORBCommon.hpp"
-#include "uORBTopics.hpp"
+#include "topics/uORBTopics.hpp"
+
 
 
 namespace uORB
@@ -51,8 +53,8 @@ class Manager;
 #include <stdlib.h>
 #include <nuttx/semaphore.h>
 
-#include "containers/IntrusiveSortedList.hpp"
-#include "atomic_bitset.h"
+#include "include/containers/IntrusiveSortedList.hpp"
+#include "include/atomic_bitset.h"
 
 /**
  * Master control device for ObjDev.
@@ -114,7 +116,8 @@ private:
 	uORB::DeviceNode *getDeviceNodeLocked(const struct orb_metadata *meta, const uint8_t instance);
 
 	IntrusiveSortedList<uORB::DeviceNode *> _node_list;
-	AtomicBitset<ORB_TOPICS_COUNT> _node_exists[ORB_MULTI_MAX_INSTANCES];
+	
+	px4::AtomicBitset<ORB_TOPICS_COUNT> _node_exists[ORB_MULTI_MAX_INSTANCES];
 
 	sem_t	_lock; /**< lock to protect access to all class members (also for derived classes) */
 

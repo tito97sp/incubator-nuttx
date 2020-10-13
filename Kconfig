@@ -1818,6 +1818,7 @@ source libs/libc/Kconfig
 source libs/libxx/Kconfig
 source libs/libdsp/Kconfig
 source libs/cdev/Kconfig
+source libs/uorb/Kconfig
 endmenu
 
 menu "Open Asymmetric Multi Processing"

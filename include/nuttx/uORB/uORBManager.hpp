@@ -36,15 +36,15 @@
 
 #include "uORBCommon.hpp"
 #include "uORBDeviceMaster.hpp"
-
-#include <stdint.h>
-
 #include "ORBSet.hpp"
 
-#include <string>
-#include <set>
-#define ORBSet std::set<std::string>
-#endif
+//#include <stdint.h>
+
+//#include <string>
+//#include <set>
+
+//#define ORBSet std::set<std::string>
+//#endif
 
 #ifdef ORB_COMMUNICATOR
 #include "uORBCommunicator.hpp"
@@ -378,7 +378,7 @@ private: // data members
 	ORBSet _remote_topics;
 #endif /* ORB_COMMUNICATOR */
 
-	uORBDeviceMaster *_device_master{nullptr};
+	uORB::DeviceMaster *_device_master{nullptr};
 
 private: //class methods
 	Manager();

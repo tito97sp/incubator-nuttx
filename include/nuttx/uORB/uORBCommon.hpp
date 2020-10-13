@@ -34,8 +34,8 @@
 #ifndef _uORBCommon_hpp_
 #define _uORBCommon_hpp_
 
-#include "drv_orb_dev.h"
-#include "drv_hrt.h"
+#include "include/drv_orb_dev.h"
+#include "include/drv_hrt.h"
 #include "uORB.h"
 
 

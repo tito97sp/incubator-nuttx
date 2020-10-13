@@ -189,4 +189,18 @@ CLEANDIRS += libs$(DELIM)cdev
 endif
 
 
+ifeq ($(CONFIG_UORB),y)
+  ifeq ($(CONFIG_BUILD_FLAT),y)
+  KERNDEPDIRS += libs$(DELIM)uorb
+  KERNDEPDIRS += libs$(DELIM)uorb_msgs
+  else
+  USERDEPDIRS += libs$(DELIM)uorb
+  USERDEPDIRS += libs$(DELIM)uorb_msgs
+  endif
+else
+CLEANDIRS += libs$(DELIM)uorb
+CLEANDIRS += libs$(DELIM)uorb_msgs
+endif
+
+
 CLEANDIRS += $(KERNDEPDIRS) $(USERDEPDIRS)

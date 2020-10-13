@@ -39,11 +39,15 @@
 #pragma once
 
 #include "uORB.h"
-#include "uORBTopics.hpp"
+#include "topics/uORBTopics.hpp"
 
 #include "uORBDeviceNode.hpp"
 #include "uORBManager.hpp"
 #include "uORBUtils.hpp"
+
+#ifdef __cplusplus
+extern "C++" {
+#endif
 
 namespace uORB
 {
@@ -197,3 +201,7 @@ private:
 };
 
 } // namespace uORB
+
+#ifdef __cplusplus
+}  // end extern "C"
+#endif

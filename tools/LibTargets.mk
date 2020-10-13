@@ -58,6 +58,18 @@ libs$(DELIM)cdev$(DELIM)libcdev$(LIBEXT): pass2dep
 staging$(DELIM)libcdev$(LIBEXT): libs$(DELIM)cdev$(DELIM)libcdev$(LIBEXT)
 	$(Q) $(call INSTALL_LIB,$<,$@)
 
+libs$(DELIM)uorb$(DELIM)libuorb$(LIBEXT): pass2dep
+	$(Q) $(MAKE) -C libs$(DELIM)uorb libuorb$(LIBEXT) EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)"
+
+staging$(DELIM)libuorb$(LIBEXT): libs$(DELIM)uorb$(DELIM)libuorb$(LIBEXT)
+	$(Q) $(call INSTALL_LIB,$<,$@)
+
+libs$(DELIM)uorb_msgs$(DELIM)libuorb_msgs$(LIBEXT): pass2dep
+	$(Q) $(MAKE) -C libs$(DELIM)uorb_msgs libuorb_msgs$(LIBEXT) EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)"
+
+staging$(DELIM)libuorb_msgs$(LIBEXT): libs$(DELIM)uorb_msgs$(DELIM)libuorb_msgs$(LIBEXT)
+	$(Q) $(call INSTALL_LIB,$<,$@)
+
 mm$(DELIM)libkmm$(LIBEXT): pass2dep
 	$(Q) $(MAKE) -C mm libkmm$(LIBEXT) EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)"
 

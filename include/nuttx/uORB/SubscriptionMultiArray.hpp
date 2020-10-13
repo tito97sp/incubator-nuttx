@@ -38,7 +38,7 @@
 
 #pragma once
 
-#include <uORB/uORB.h>
+#include "uORB.h"
 
 //#include <px4_platform_common/defines.h>
 //#include <lib/mathlib/mathlib.h>

@@ -1,0 +1,26 @@
+#get current directory path
+uorb_msgs_path := $(CURDIR)
+
+#list messages
+list_msg_files += orb_test.msg  nico.msg
+list_msg_we += $(patsubst %.msg,%,$(list_msg_files))
+
+msg_msg_dir := $(uorb_msgs_path)/msg
+msg_tmp_dir := $(msg_msg_dir)/tmp
+msg_headers_out_path := $(TOPDIR)/include/nuttx/uORB/topics/
+msg_sources_out_path := $(msg_msg_dir)/topics_sources/
+
+uorb_headers := uORBTopics.hpp
+uorb_sources := uORBTopics.cpp
+
+uorb_headers += $(foreach msg_file, $(list_msg_we), $(msg_file).h)
+uorb_sources += $(foreach msg_file, $(list_msg_we), $(msg_file).cpp)
+
+uorb_headers_path += $(foreach msg_file, $(uorb_headers),$(msg_headers_out_path)$(msg_file).h)
+uorb_sources_path += $(foreach msg_file, $(uorb_sources),$(msg_sources_out_path)$(msg_file).cpp)
+
+
+DEPPATH += --dep-path msg/topics_sources
+VPATH += :msg/topics_sources
+
+UORB_MSGS_CSRCS += $(uorb_sources)

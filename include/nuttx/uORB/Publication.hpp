@@ -40,7 +40,7 @@
 
 #include "uORB.h"
 #include "uORBDeviceNode.hpp"
-#include "uORBTopics.hpp"
+#include "topics/uORBTopics.hpp"
 
 namespace uORB
 {

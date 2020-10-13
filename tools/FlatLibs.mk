@@ -152,9 +152,12 @@ ifeq ($(CONFIG_CDEV),y)
 NUTTXLIBS += staging$(DELIM)libcdev$(LIBEXT)
 endif
 
-ifeq ($(CONFIG_CDEV),y)
-NUTTXLIBS += staging$(DELIM)libcdev$(LIBEXT)
+ifeq ($(CONFIG_UORB),y)
+NUTTXLIBS += staging$(DELIM)libuorb$(LIBEXT)
+NUTTXLIBS += staging$(DELIM)libuorb_msgs$(LIBEXT)
 endif
+
+
 
 # Export all libraries
 

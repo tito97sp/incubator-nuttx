@@ -35,11 +35,14 @@
 
 #include "uORBCommon.hpp"
 #include "uORBDeviceMaster.hpp"
+#include "topics/uORBTopics.hpp"
 
 #include <nuttx/cdev/CDev.hpp>
 
-#include "containers/IntrusiveSortedList.hpp"
-#include "containers/List.hpp"
+#include "include/containers/IntrusiveSortedList.hpp"
+#include "include/containers/List.hpp"
+
+#include "include/atomic.h"
 
 namespace uORB
 {
