@@ -211,8 +211,10 @@ config ARCH_CHIP_NRF52
 	select ARCH_HAVE_TICKLESS
 	#select ARCH_HAVE_MPU
 	#select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_SPI_BITORDER
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_PWM_MULTICHAN
+	select ARCH_HAVE_SERIAL_TERMIOS
 	---help---
 		Nordic NRF52 architectures (ARM Cortex-M4).
 
@@ -433,6 +435,12 @@ config ARCH_CHIP_CXD56XX
 	---help---
 		Sony CXD56XX (ARM Cortex-M4) architectures
 
+config ARCH_CHIP_ARM_CUSTOM
+	bool "Custom ARM chip"
+	select ARCH_CHIP_CUSTOM
+	---help---
+		Select this option if there is no directory for the chip under arch/arm/src/.
+
 endchoice
 
 config ARCH_ARM7TDMI
@@ -583,6 +591,7 @@ config ARCH_CORTEXM7
 config ARCH_ARMV7A
 	bool
 	default n
+	select ARM_HAVE_WFE_SEV
 
 config ARCH_CORTEXA5
 	bool
@@ -781,6 +790,12 @@ config ARM_THUMB
 	bool
 	default n
 	depends on ARCH_ARMV7A
+
+config ARM_HAVE_WFE_SEV
+	bool
+	default n
+	---help---
+		Use WFE and SEV instructions for spinlock to reduce power consumption
 
 config ARM_HAVE_MPU_UNIFIED
 	bool

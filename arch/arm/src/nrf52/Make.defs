@@ -115,6 +115,10 @@ endif
 
 ifeq ($(CONFIG_NRF52_WDT),y)
 CHIP_CSRCS += nrf52_wdt.c
+
+ifeq ($(CONFIG_WATCHDOG),y)
+CHIP_CSRCS += nrf52_wdt_lowerhalf.c
+endif
 endif
 
 ifeq ($(CONFIG_NRF52_RNG),y)
@@ -127,6 +131,10 @@ endif
 
 ifeq ($(CONFIG_NRF52_I2C_MASTER),y)
 CHIP_CSRCS += nrf52_i2c.c
+endif
+
+ifeq ($(CONFIG_I2C_BITBANG),y)
+CHIP_CSRCS += nrf52_i2c_bitbang.c
 endif
 
 ifeq ($(CONFIG_NRF52_PPI),y)
@@ -154,4 +162,8 @@ endif
 
 ifeq ($(CONFIG_NRF52_SAADC),y)
 CHIP_CSRCS += nrf52_adc.c
+endif
+
+ifeq ($(CONFIG_PM),y)
+CHIP_CSRCS += nrf52_pminitialize.c
 endif

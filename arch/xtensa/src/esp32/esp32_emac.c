@@ -145,7 +145,7 @@
 
 /* SMI interface pins */
 
-#define EMAC_MDC_PIN            (CONFIG_ESP32_ETH_MDCPIN)         
+#define EMAC_MDC_PIN            (CONFIG_ESP32_ETH_MDCPIN)
 #define EMAC_MDIO_PIN           (CONFIG_ESP32_ETH_MDIOPIN)
 
 /* Reset PHY chip pins */
@@ -208,7 +208,7 @@ struct esp32_emac_s
   struct work_s         timeoutwork; /* For TX timeout work to the work queue */
   struct work_s         pollwork;    /* For deferring poll work to the work queue */
 
-  uint32_t              cpuint;      /* SPI interrupt ID */
+  int                   cpuint;      /* SPI interrupt ID */
 
   sq_queue_t            freeb;       /* The free buffer list */
 
@@ -496,20 +496,20 @@ static int emac_read_mac(uint8_t *mac)
 
 static void emac_init_gpio(void)
 {
-  esp32_configgpio(EMAC_TXEN_PIN, OUTPUT_FUNCTION_5);
-  esp32_configgpio(EMAC_TXDO_PIN, OUTPUT_FUNCTION_5);
-  esp32_configgpio(EMAC_TXD1_PIN, OUTPUT_FUNCTION_5);
+  esp32_configgpio(EMAC_TXEN_PIN, OUTPUT_FUNCTION_6);
+  esp32_configgpio(EMAC_TXDO_PIN, OUTPUT_FUNCTION_6);
+  esp32_configgpio(EMAC_TXD1_PIN, OUTPUT_FUNCTION_6);
 
-  esp32_configgpio(EMAC_RXDO_PIN, INPUT_FUNCTION_5);
-  esp32_configgpio(EMAC_RXD1_PIN, INPUT_FUNCTION_5);
-  esp32_configgpio(EMAC_RXDV_PIN, INPUT_FUNCTION_5);
+  esp32_configgpio(EMAC_RXDO_PIN, INPUT_FUNCTION_6);
+  esp32_configgpio(EMAC_RXD1_PIN, INPUT_FUNCTION_6);
+  esp32_configgpio(EMAC_RXDV_PIN, INPUT_FUNCTION_6);
 
-  esp32_configgpio(EMAC_ICLK_PIN, INPUT_FUNCTION_5);
+  esp32_configgpio(EMAC_ICLK_PIN, INPUT_FUNCTION_6);
 
-  esp32_configgpio(EMAC_MDC_PIN, OUTPUT | FUNCTION_2);
+  esp32_configgpio(EMAC_MDC_PIN, OUTPUT | FUNCTION_3);
   gpio_matrix_out(EMAC_MDC_PIN, EMAC_MDC_O_IDX, 0, 0);
 
-  esp32_configgpio(EMAC_MDIO_PIN, OUTPUT | INPUT | FUNCTION_2);
+  esp32_configgpio(EMAC_MDIO_PIN, OUTPUT | INPUT | FUNCTION_3);
   gpio_matrix_out(EMAC_MDIO_PIN, EMAC_MDO_O_IDX, 0, 0);
   gpio_matrix_in(EMAC_MDIO_PIN, EMAC_MDI_I_IDX, 0);
 
@@ -1693,7 +1693,7 @@ static void emac_dopoll(struct esp32_emac_s *priv)
 
       dev->d_len = EMAC_BUF_LEN;
 
-      devif_poll(dev, emac_txpoll);
+      devif_timer(dev, 0, emac_txpoll);
 
       if (dev->d_buf)
         {

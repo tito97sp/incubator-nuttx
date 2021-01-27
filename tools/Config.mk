@@ -135,6 +135,22 @@ else
   DELIM ?= $(strip /)
 endif
 
+# Process chip-specific directories
+
+ifeq ($(CONFIG_ARCH_CHIP_CUSTOM),y)
+  CUSTOM_CHIP_DIR = $(patsubst "%",%,$(CONFIG_ARCH_CHIP_CUSTOM_DIR))
+ifeq ($(CONFIG_ARCH_CHIP_CUSTOM_DIR_RELPATH),y)
+  CHIP_DIR ?= $(TOPDIR)$(DELIM)$(CUSTOM_CHIP_DIR)
+  CHIP_KCONFIG = $(TOPDIR)$(DELIM)$(CUSTOM_CHIP_DIR)$(DELIM)Kconfig
+else
+  CHIP_DIR ?= $(CUSTOM_CHIP_DIR)
+  CHIP_KCONFIG = $(CUSTOM_CHIP_DIR)$(DELIM)Kconfig
+endif
+else
+  CHIP_DIR ?= $(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src$(DELIM)$(CONFIG_ARCH_CHIP)
+  CHIP_KCONFIG = $(TOPDIR)$(DELIM)arch$(DELIM)dummy$(DELIM)dummy_kconfig
+endif
+
 # Process board-specific directories
 
 ifeq ($(CONFIG_ARCH_BOARD_CUSTOM),y)
@@ -183,6 +199,25 @@ else ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
 else
   MKDEP ?= $(TOPDIR)$(DELIM)tools$(DELIM)mkdeps$(HOSTEXEEXT)
 endif
+
+# Per-file dependency generation rules
+
+OBJPATH ?= .
+
+%.dds: %.S
+	$(Q) $(MKDEP) --obj-path $(OBJPATH) --obj-suffix $(OBJEXT) $(DEPPATH) "$(CC)" -- $(CFLAGS) -- $< > $@
+
+%.ddc: %.c
+	$(Q) $(MKDEP) --obj-path $(OBJPATH) --obj-suffix $(OBJEXT) $(DEPPATH) "$(CC)" -- $(CFLAGS) -- $< > $@
+
+%.ddp: %.cpp
+	$(Q) $(MKDEP) --obj-path $(OBJPATH) --obj-suffix $(OBJEXT) $(DEPPATH) "$(CXX)" -- $(CXXFLAGS) -- $< > $@
+
+%.ddx: %.cxx
+	$(Q) $(MKDEP) --obj-path $(OBJPATH) --obj-suffix $(OBJEXT) $(DEPPATH) "$(CXX)" -- $(CXXFLAGS) -- $< > $@
+
+%.ddh: %.c
+	$(Q) $(MKDEP) --obj-path $(OBJPATH) --obj-suffix $(OBJEXT) $(DEPPATH) "$(CC)" -- $(HOSTCFLAGS) -- $< > $@
 
 # INCDIR - Convert a list of directory paths to a list of compiler include
 #   directories
@@ -430,7 +465,7 @@ define CATFILE
 endef
 else
 define CATFILE
-	$(Q) cat $(2) > $1
+	$(Q) if [ -z "$(strip $(2))" ]; then echo '' > $(1); else cat $(2) > $1; fi
 endef
 endif
 
@@ -455,10 +490,12 @@ define CLEAN
 	$(Q) if exist *$(LIBEXT) (del /f /q *$(LIBEXT))
 	$(Q) if exist *~ (del /f /q *~)
 	$(Q) if exist (del /f /q  .*.swp)
+	$(Q) if exist $(OBJS) (del /f /q $(OBJS))
+	$(Q) if exist $(BIN) (del /f /q  $(BIN))
 endef
 else
 define CLEAN
-	$(Q) rm -f *$(OBJEXT) *$(LIBEXT) *~ .*.swp
+	$(Q) rm -f *$(OBJEXT) *$(LIBEXT) *~ .*.swp $(OBJS) $(BIN)
 endef
 endif
 
@@ -500,6 +537,10 @@ $(1)_$(2):
 	+$(Q) $(MAKE) -C $(1) $(2) APPDIR="$(APPDIR)"
 
 endef
+
+# ARCHxxx means the predefined setting(either toolchain, arch, or system specific)
+
+ARCHDEFINES += ${shell $(DEFINE) "$(CC)" __NuttX__}
 
 # The default C/C++ search path
 

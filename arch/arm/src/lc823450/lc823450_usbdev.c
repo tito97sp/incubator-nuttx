@@ -75,11 +75,7 @@
 
 #ifndef MIN
 #  define MIN(a, b) ((a) > (b) ? (b) : (a))
-#endif /* MIN */
-
-#ifndef MAX
-#  define MAX(a, b) ((a) > (b) ? (a) : (b))
-#endif /* MIN */
+#endif
 
 #if 0
 #  define DPRINTF(fmt, args...) uinfo(fmt, ##args)
@@ -385,9 +381,9 @@ static void epcmd_write(int epnum, uint32_t val)
  * Input Parameters:
  *   ep   - the struct usbdev_ep_s instance obtained from allocep()
  *   desc - A struct usb_epdesc_s instance describing the endpoint
- *   last - true if this this last endpoint to be configured.  Some hardware
- *          needs to take special action when all of the endpoints have been
- *          configured.
+ *   last - true if this is the last endpoint to be configured.  Some
+ *          hardware needs to take special action when all of the endpoints
+ *          have been configured.
  *
  ****************************************************************************/
 
@@ -618,7 +614,7 @@ static void *lc823450_epallocbuffer(struct usbdev_ep_s *ep, uint16_t bytes)
 #  ifdef CONFIG_USBDEV_DMAMEMORY
   return usbdev_dma_alloc(bytes);
 #  else
-  return kmm_alloc(bytes);
+  return kmm_malloc(bytes);
 #  endif
 }
 #endif
@@ -806,7 +802,7 @@ static struct usbdev_ep_s *lc823450_allocep(struct usbdev_s *dev,
 
   if (priv->used & 1 << epphy)
     {
-      uinfo("ep%d is still used\n");
+      uinfo("ep is still used\n");
       return NULL;
     }
 

@@ -34,7 +34,7 @@
 ############################################################################
 
 include $(TOPDIR)/Make.defs
-include chip/Make.defs
+-include chip/Make.defs
 
 ifeq ($(CONFIG_ARCH_MOR1KX),y)          # OpenRISC mor1kx
 ARCH_SUBDIR = mor1kx
@@ -181,15 +181,22 @@ endif
 
 # Dependencies
 
+makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds) $(HEAD_ASRC:.S=.dds)
+	$(call CATFILE, Make.dep, $^)
+	$(call DELFILE, $^)
+
 .depend: Makefile chip$(DELIM)Make.defs $(SRCS) $(TOPDIR)$(DELIM).config
 ifeq ($(BOARDMAKE),y)
 	$(Q) $(MAKE) -C board depend
 endif
-	$(Q) $(MKDEP) $(patsubst %,--dep-path %,$(subst :, ,$(VPATH))) \
-	 "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make.dep
+	$(Q) $(MAKE) makedepfile DEPPATH="$(patsubst %,--dep-path %,$(subst :, ,$(VPATH)))"
 	$(Q) touch $@
 
 depend: .depend
+
+context::
+
+clean_context::
 
 clean:
 ifeq ($(BOARDMAKE),y)

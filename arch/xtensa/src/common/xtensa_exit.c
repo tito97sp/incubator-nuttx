@@ -135,7 +135,7 @@ static void _xtensa_dumponexit(FAR struct tcb_s *tcb, FAR void *arg)
  *   This function causes the currently executing task to cease
  *   to exist.  This is a special case of task_delete() where the task to
  *   be deleted is the currently executing task.  It is more complex because
- *   a context switch must be perform to the next ready to run task.
+ *   a context switch must be performed to the next ready to run task.
  *
  ****************************************************************************/
 
@@ -171,6 +171,12 @@ void up_exit(int status)
    */
 
   tcb = this_task();
+
+  /* Adjusts time slice for SCHED_RR & SCHED_SPORADIC cases
+   * NOTE: the API also adjusts the global IRQ control for SMP
+   */
+
+  nxsched_resume_scheduler(tcb);
 
 #if XCHAL_CP_NUM > 0
   /* Set up the co-processor state for the newly started thread. */

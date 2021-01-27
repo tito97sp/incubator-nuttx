@@ -23,6 +23,7 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: '3.8'
+<<<<<<< HEAD
       - name: Generate requirements.txt file
         run: |
           cd Documentation/
@@ -32,10 +33,21 @@ jobs:
       - uses: ammaraskar/sphinx-action@master
         with:
           docs-folder: "Documentation/"
+=======
+      - name: Generate Documentation
+        run: |
+          cd Documentation/
+          pip3 install pipenv
+          pipenv install
+          pipenv run make html
+          # This step flakes frequently so still annotate errors but dont fail the build
+          pipenv run make linkcheck || true
+>>>>>>> master
       - uses: actions/upload-artifact@v2
         with:
           name: sphinx-docs
           path: Documentation/_build/html/
+<<<<<<< HEAD
   linkcheck:
     runs-on: ubuntu-latest
     steps:
@@ -51,3 +63,5 @@ jobs:
           pipenv install
           # This step flakes frequently so still annotate errors but dont fail the build
           pipenv run make linkcheck || true
+=======
+>>>>>>> master

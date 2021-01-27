@@ -50,7 +50,7 @@ WARCHCMNDIR = ${shell cygpath -w $(ARCHCMDDIR)}
 USRINCLUDES = -usrinc:'$(WSCHEDSRCDIR);$(WARCHCHIPDIR);$(WARCHCMNDIR)'
 
 INCLUDES = $(ARCHSTDINCLUDES) $(USRINCLUDES)
-CFLAGS = $(ARCHWARNINGS) $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS) $(INCLUDES) $(ARCHDEFINES) 
+CFLAGS := $(ARCHWARNINGS) $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS) $(INCLUDES) $(ARCHDEFINES)
 CPPFLAGS += -I$(ARCHSRCDIR) -I$(ZDSSTDINCDIR) -I$(ZDSZILOGINCDIR)
 LDFLAGS  += @nuttx.linkcmd
 
@@ -157,6 +157,10 @@ export_startup: board$(DELIM)libboard$(LIBEXT) $(STARTUP_OBJS)
 # Dependencies
 
 depend: .depend
+
+context::
+
+clean_context::
 
 clean:
 	$(Q) if [ -e board$(DELIM)Makefile ]; then \

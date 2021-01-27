@@ -55,6 +55,7 @@ include mmcsd/Make.defs
 include modem/Make.defs
 include mtd/Make.defs
 include eeprom/Make.defs
+include efuse/Make.defs
 include net/Make.defs
 include note/Make.defs
 include pipes/Make.defs
@@ -74,6 +75,7 @@ include wireless/Make.defs
 include contactless/Make.defs
 include 1wire/Make.defs
 include rf/Make.defs
+include rc/Make.defs
 
 ifeq ($(CONFIG_SPECIFIC_DRIVERS),y)
 include platform/Make.defs
@@ -84,6 +86,10 @@ ifeq ($(CONFIG_DEV_SIMPLE_ADDRENV),y)
 endif
 
 CSRCS += dev_null.c dev_zero.c
+
+ifeq ($(CONFIG_LWL_CONSOLE),y)
+  CSRCS += lwl_console.c
+endif
 
 ifneq ($(CONFIG_DISABLE_MOUNTPOINT),y)
   CSRCS += ramdisk.c
@@ -119,8 +125,12 @@ $(COBJS): %$(OBJEXT): %.c
 $(BIN): $(OBJS)
 	$(call ARCHIVE, $@, $(OBJS))
 
+makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
+	$(call CATFILE, Make.dep, $^)
+	$(call DELFILE, $^)
+
 .depend: Makefile $(SRCS) $(TOPDIR)$(DELIM).config
-	$(Q) $(MKDEP) $(DEPPATH) "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make.dep
+	$(Q) $(MAKE) makedepfile
 	$(Q) touch $@
 
 depend: .depend

@@ -134,7 +134,7 @@ static const struct nxsig_defaction_s g_defactions[] =
 #endif
 #ifdef CONFIG_SIG_SIGSTOP_ACTION
   { SIGSTOP, SIG_FLAG_NOCATCH, nxsig_stop_task },
-  { SIGSTP,  0,                nxsig_stop_task },
+  { SIGTSTP, 0,                nxsig_stop_task },
   { SIGCONT, SIG_FLAG_NOCATCH, nxsig_null_action },
 #endif
 #ifdef CONFIG_SIG_SIGKILL_ACTION
@@ -255,7 +255,7 @@ static void nxsig_abnormal_termination(int signo)
  * Name: nxsig_stop_task
  *
  * Description:
- *   This is the handler for the abnormal termination default action.
+ *   This is the handler for the stop default action.
  *
  * Input Parameters:
  *   Standard signal handler parameters
@@ -317,7 +317,7 @@ static void nxsig_stop_task(int signo)
 
       group->tg_waitflags = 0;
 
-      /* YWakeup any tasks waiting for this task to exit or stop. */
+      /* Wakeup any tasks waiting for this task to exit or stop. */
 
       while (group->tg_exitsem.semcount < 0)
         {

@@ -34,7 +34,7 @@
 ############################################################################
 
 include $(TOPDIR)/Make.defs
-include chip/Make.defs
+-include chip/Make.defs
 
 ARCH_SRCDIR = $(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src
 
@@ -96,16 +96,16 @@ endif
 # Add the builtin library
 
 EXTRA_LIBS += -lgcc
-EXTRA_LIBPATHS += -L "${dir ${shell $(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name}}"
+EXTRA_LIBPATHS += -L"${shell dirname "`$(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name`"}"
 
 ifneq ($(CONFIG_LIBM),y)
   EXTRA_LIBS += -lm
-  EXTRA_LIBPATHS += -L "${dir ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libm.a}}"
+  EXTRA_LIBPATHS += -L"${shell dirname "`$(CC) $(ARCHCPUFLAGS) --print-file-name=libm.a`"}"
 endif
 
 ifeq ($(CONFIG_CXX_LIBSUPCXX),y)
   EXTRA_LIBS += -lsupc++
-  EXTRA_LIBPATHS += -L "${dir ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libsupc++.a}}"
+  EXTRA_LIBPATHS += -L"${shell dirname "`$(CC) $(ARCHCPUFLAGS) --print-file-name=libsupc++.a`"}"
 endif
 
 VPATH = chip:common
@@ -149,14 +149,22 @@ export_startup: board/libboard$(LIBEXT) $(STARTUP_OBJS)
 
 # Dependencies
 
+makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds) $(HEAD_ASRC:.S=.dds)
+	$(call CATFILE, Make.dep, $^)
+	$(call DELFILE, $^)
+
 .depend: Makefile chip/Make.defs $(SRCS) $(TOPDIR)$(DELIM).config
 ifeq ($(BOARDMAKE),y)
 	$(Q) $(MAKE) -C board depend
 endif
-	$(Q) $(MKDEP) --dep-path chip --dep-path common "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make.dep
+	$(Q) $(MAKE) makedepfile DEPPATH="--dep-path chip --dep-path common"
 	$(Q) touch $@
 
 depend: .depend
+
+context::
+
+clean_context::
 
 clean:
 ifeq ($(BOARDMAKE),y)

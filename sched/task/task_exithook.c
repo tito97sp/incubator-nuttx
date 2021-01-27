@@ -203,11 +203,6 @@ static inline void nxtask_exitstatus(FAR struct task_group_s *group,
       child = group_find_child(group, getpid());
       if (child)
         {
-#ifndef HAVE_GROUP_MEMBERS
-          /* No group members? Save the exit status */
-
-          child->ch_status = status;
-#endif
           /* Save the exit status..  For the case of HAVE_GROUP_MEMBERS,
            * the child status will be as exited until the last member
            * of the task group exits.
@@ -264,7 +259,7 @@ static inline void nxtask_groupexit(FAR struct task_group_s *group)
  * Name: nxtask_sigchild
  *
  * Description:
- *   Send the SIGCHILD signal to the parent thread
+ *   Send the SIGCHLD signal to the parent thread
  *
  ****************************************************************************/
 
@@ -405,7 +400,7 @@ static inline void nxtask_sigchild(FAR struct tcb_s *ptcb,
  * Name: nxtask_signalparent
  *
  * Description:
- *   Send the SIGCHILD signal to the parent task group
+ *   Send the SIGCHLD signal to the parent task group
  *
  ****************************************************************************/
 
@@ -639,7 +634,13 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status, bool nonblocking)
 
   nxtask_recover(tcb);
 
-  /* Send the SIGCHILD signal to the parent task group */
+  /* NOTE: signal handling needs to be done in a criticl section */
+
+#ifdef CONFIG_SMP
+  irqstate_t flags = enter_critical_section();
+#endif
+
+  /* Send the SIGCHLD signal to the parent task group */
 
   nxtask_signalparent(tcb, status);
 
@@ -672,6 +673,10 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status, bool nonblocking)
   /* Deallocate anything left in the TCB's queues */
 
   nxsig_cleanup(tcb); /* Deallocate Signal lists */
+
+#ifdef CONFIG_SMP
+  leave_critical_section(flags);
+#endif
 
   /* This function can be re-entered in certain cases.  Set a flag
    * bit in the TCB to not that we have already completed this exit

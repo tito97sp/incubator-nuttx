@@ -59,7 +59,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define MAX_BUFFER  (4096)
+#define MAX_BUFFER  (8192)
 #define MAX_EXPAND  (2048)
 #define MAX_SHQUOTE (2048)
 
@@ -514,7 +514,7 @@ static void parse_args(int argc, char **argv)
        * this happens normally in some configurations
        */
 
-      printf("# No files specified for dependency generataion\n");
+      printf("# No files specified for dependency generation\n");
       exit(EXIT_SUCCESS);
     }
 

@@ -191,11 +191,11 @@
 /* Quasi-standard definitions */
 
 #ifndef MIN
-#  define MIN(a,b)                (a < b ? a : b)
+#  define MIN(a,b)                ((a) < (b) ? (a) : (b))
 #endif
 
 #ifndef MAX
-#  define MAX(a,b)                (a > b ? a : b)
+#  define MAX(a,b)                ((a) > (b) ? (a) : (b))
 #endif
 
 /****************************************************************************
@@ -1054,7 +1054,7 @@ int nxffs_rdblkhdr(FAR struct nxffs_volume_s *volume, off_t offset,
  *
  * Description:
  *   Remove an inode from FLASH.  This is the internal implementation of
- *   the file system unlinke operation.
+ *   the file system unlink operation.
  *
  * Input Parameters:
  *   volume - Describes the NXFFS volume.

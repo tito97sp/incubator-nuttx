@@ -39,6 +39,7 @@
 
 #include <nuttx/config.h>
 
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -186,6 +187,7 @@
  *
  * The imxrt1050-evk board uses a KSZ8081 PHY
  * The Versiboard2 uses a LAN8720 PHY
+ * The Teensy-4.1 board uses a DP83825I PHY
  *
  * ...and further PHY descriptions here.
  */
@@ -208,6 +210,15 @@
 #  define BOARD_PHY_10BASET(s)  (((s)&MII_LAN8720_SPSCR_10MBPS) != 0)
 #  define BOARD_PHY_100BASET(s) (((s)&MII_LAN8720_SPSCR_100MBPS) != 0)
 #  define BOARD_PHY_ISDUPLEX(s) (((s)&MII_LAN8720_SPSCR_DUPLEX) != 0)
+#elif defined(CONFIG_ETH0_PHY_DP83825I)
+#  define BOARD_PHY_NAME        "DP83825I"
+#  define BOARD_PHYID1          MII_PHYID1_DP83825I
+#  define BOARD_PHYID2          MII_PHYID2_DP83825I
+#  define BOARD_PHY_STATUS      MII_DP83825I_PHYSTS
+#  define BOARD_PHY_ADDR        (0)
+#  define BOARD_PHY_10BASET(s)  (((s) & MII_DP83825I_PHYSTS_SPEED) != 0)
+#  define BOARD_PHY_100BASET(s) (((s) & MII_DP83825I_PHYSTS_SPEED) == 0)
+#  define BOARD_PHY_ISDUPLEX(s) (((s) & MII_DP83825I_PHYSTS_DUPLEX) != 0)
 #else
 #  error "Unrecognized or missing PHY selection"
 #endif
@@ -1015,7 +1026,7 @@ static void imxrt_enet_interrupt_work(FAR void *arg)
 
       NETDEV_ERRORS(&priv->dev);
 
-      nerr("ERROR: Network interface error occurred (0x%08X)\n",
+      nerr("ERROR: Network interface error occurred (0x%08" PRIX32 ")\n",
            (pending & ERROR_INTERRUPTS));
     }
 
@@ -1090,7 +1101,7 @@ static void imxrt_enet_interrupt_work(FAR void *arg)
  * Function: imxrt_enet_interrupt
  *
  * Description:
- *   Three interrupt sources will vector this this function:
+ *   Three interrupt sources will vector to this function:
  *   1. Ethernet MAC transmit interrupt handler
  *   2. Ethernet MAC receive interrupt handler
  *   3.
@@ -1299,8 +1310,10 @@ static int imxrt_ifup_action(struct net_driver_s *dev, bool resetphy)
   int ret;
 
   ninfo("Bringing up: %d.%d.%d.%d\n",
-        dev->d_ipaddr & 0xff, (dev->d_ipaddr >> 8) & 0xff,
-        (dev->d_ipaddr >> 16) & 0xff, dev->d_ipaddr >> 24);
+        (int)(dev->d_ipaddr & 0xff),
+        (int)((dev->d_ipaddr >> 8) & 0xff),
+        (int)((dev->d_ipaddr >> 16) & 0xff),
+        (int)(dev->d_ipaddr >> 24));
 
   /* Initialize ENET buffers */
 
@@ -1442,8 +1455,10 @@ static int imxrt_ifdown(struct net_driver_s *dev)
   irqstate_t flags;
 
   ninfo("Taking down: %d.%d.%d.%d\n",
-        dev->d_ipaddr & 0xff, (dev->d_ipaddr >> 8) & 0xff,
-        (dev->d_ipaddr >> 16) & 0xff, dev->d_ipaddr >> 24);
+        (int)(dev->d_ipaddr & 0xff),
+        (int)((dev->d_ipaddr >> 8) & 0xff),
+        (int)((dev->d_ipaddr >> 16) & 0xff),
+        (int)(dev->d_ipaddr >> 24));
 
   /* Flush and disable the Ethernet interrupts at the NVIC */
 
@@ -1507,7 +1522,7 @@ static void imxrt_txavail_work(FAR void *arg)
            * new XMIT data.
            */
 
-          devif_poll(&priv->dev, imxrt_txpoll);
+          devif_timer(&priv->dev, 0, imxrt_txpoll);
         }
     }
 
@@ -2164,6 +2179,25 @@ static inline int imxrt_initphy(struct imxrt_driver_s *priv, bool renogphy)
       /* ...and reset PHY */
 
       imxrt_writemii(priv, phyaddr, MII_MCR, MII_MCR_RESET);
+
+#elif defined (CONFIG_ETH0_PHY_DP83825I)
+
+      /* Reset PHY */
+
+      imxrt_writemii(priv, phyaddr, MII_MCR, MII_MCR_RESET);
+
+      /* Set RMII mode and Indicate 50MHz clock */
+
+      imxrt_writemii(priv, phyaddr, MII_DP83825I_RCSR,
+                    MII_DP83825I_RCSC_ELAST_2 | MII_DP83825I_RCSC_RMIICS);
+
+      imxrt_writemii(priv, phyaddr, MII_ADVERTISE,
+                     MII_ADVERTISE_100BASETXFULL |
+                     MII_ADVERTISE_100BASETXHALF |
+                     MII_ADVERTISE_10BASETXFULL |
+                     MII_ADVERTISE_10BASETXHALF |
+                     MII_ADVERTISE_CSMA);
+
 #endif
 
       /* Start auto negotiation */

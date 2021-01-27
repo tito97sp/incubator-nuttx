@@ -34,7 +34,7 @@
 ############################################################################
 
 include $(TOPDIR)/Make.defs
-include chip/Make.defs
+-include chip/Make.defs
 
 ifeq ($(CONFIG_ARCH_I486),y)
 ARCH_SUBDIR = i486
@@ -74,7 +74,7 @@ OBJS = $(AOBJS) $(COBJS)
 
 LDSTARTGROUP ?= --start-group
 LDENDGROUP ?= --end-group
-LDFLAGS += $(ARCHSCRIPT)
+LDFLAGS += $(ARCHSCRIPT) -static
 
 BOARDMAKE = $(if $(wildcard board$(DELIM)Makefile),y,)
 
@@ -153,15 +153,22 @@ export_startup: board/libboard$(LIBEXT) $(STARTUP_OBJS)
 
 # Dependencies
 
+makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds) $(HEAD_ASRC:.S=.dds)
+	$(call CATFILE, Make.dep, $^)
+	$(call DELFILE, $^)
+
 .depend: Makefile chip/Make.defs $(SRCS) $(TOPDIR)$(DELIM).config
 ifeq ($(BOARDMAKE),y)
 	$(Q) $(MAKE) -C board depend
 endif
-	$(Q) $(MKDEP) --dep-path chip --dep-path common --dep-path $(ARCH_SUBDIR) \
-	 "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make.dep
+	$(Q) $(MAKE) makedepfile DEPPATH="--dep-path chip --dep-path common --dep-path $(ARCH_SUBDIR)"
 	$(Q) touch $@
 
 depend: .depend
+
+context::
+
+clean_context::
 
 clean:
 ifeq ($(BOARDMAKE),y)

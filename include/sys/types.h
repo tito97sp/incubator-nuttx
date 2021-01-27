@@ -76,16 +76,6 @@
 #  endif
 #endif
 
-/* POSIX-like OS return values: */
-
-#if !defined(__cplusplus)
-#  undef  ERROR
-#  define ERROR -1
-#endif
-
-#undef  OK
-#define OK 0
-
 /* Scheduling Priorities.
  *
  * NOTES:
@@ -178,10 +168,9 @@ typedef int16_t      key_t;
 
 typedef intptr_t     ptrdiff_t;
 
-#ifndef CONFIG_WCHAR_BUILTIN
+#if !defined(__cplusplus)
 /* Wide, 16-bit character types.  wchar_t is a built-in type in C++ and
- * its declaration here may cause compilation errors on some compilers
- * if -DCONFIG_WCHAR_BUILTIN is not included in the CXXFLAGS.
+ * its declaration here may cause compilation errors on some compilers.
  *
  * REVISIT: wchar_t belongs in stddef.h
  */
@@ -305,6 +294,14 @@ typedef uint64_t u_int64_t;
 /* Task entry point */
 
 typedef CODE int (*main_t)(int argc, FAR char *argv[]);
+
+/* POSIX-like OS return values: */
+
+enum
+{
+  ERROR = -1,
+  OK = 0,
+};
 
 #endif /* __ASSEMBLY__ */
 
