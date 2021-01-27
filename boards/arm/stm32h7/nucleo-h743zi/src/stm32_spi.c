@@ -75,6 +75,11 @@ void stm32_spidev_initialize(void)
    *       Here, we only initialize chip select pins unique to the board
    *       architecture.
    */
+#ifdef CONFIG_STM32H7_SPI1
+#ifdef CONFIG_MMCSD_SPI
+  stm32_configgpio(GPIO_SDCARD_CS);           /* SD/MMC Card chip select */
+#endif
+#endif
 
 #ifdef CONFIG_STM32H7_SPI3
 #  ifdef CONFIG_WL_NRF24L01
@@ -116,13 +121,28 @@ void stm32_spidev_initialize(void)
 #ifdef CONFIG_STM32H7_SPI1
 void stm32_spi1select(FAR struct spi_dev_s *dev, uint32_t devid, bool selected)
 {
+  #ifdef CONFIG_MMCSD_SPI
+  if (devid == SPIDEV_MMCSD(0))
+    {
+      stm32_gpiowrite(GPIO_SDCARD_CS, !selected);
+    }
+  #endif
+
   spiinfo("devid: %08lx CS: %s\n",
           (unsigned long)devid, selected ? "assert" : "de-assert");
 }
 
 uint8_t stm32_spi1status(FAR struct spi_dev_s *dev, uint32_t devid)
 {
-  return 0;
+  uint8_t status = 0;
+  
+  #ifdef CONFIG_MMCSD_SPI
+    if (devid == SPIDEV_MMCSD(0))
+    {
+        status |= SPI_STATUS_PRESENT;
+    }
+  #endif
+  return status;
 }
 #endif
 

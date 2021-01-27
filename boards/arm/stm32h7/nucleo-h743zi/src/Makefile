@@ -51,8 +51,16 @@ ifeq ($(CONFIG_ARCH_BUTTONS),y)
 CSRCS += stm32_buttons.c
 endif
 
+ifeq ($(CONFIG_STM32_ROMFS),y)
+CSRCS += stm32_romfs_initialize.c
+endif
+
 ifeq ($(CONFIG_STM32H7_SPI),y)
 CSRCS += stm32_spi.c
+endif
+
+ifeq ($(CONFIG_MMCSD),y)
+CSRCS += stm32_mmcsd.c
 endif
 
 ifeq ($(CONFIG_STM32H7_OTGFS),y)
@@ -98,5 +106,7 @@ endif
 ifeq ($(CONFIG_PWM),y)
 CSRCS += stm32_pwm.c
 endif
+
+
 
 include $(TOPDIR)/boards/Board.mk

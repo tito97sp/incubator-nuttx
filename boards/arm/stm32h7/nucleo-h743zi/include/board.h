@@ -386,6 +386,13 @@
 #define GPIO_I2C2_SDA  GPIO_I2C2_SDA_2  /* PF0 - D68 */
 #define GPIO_I2C2_SMBA GPIO_I2C2_SMBA_2 /* PF2 - D70 */
 
+/* SPI1 */
+
+#define GPIO_SPI1_SCK  GPIO_SPI1_SCK_1      /* PA5 */
+#define GPIO_SPI1_MISO GPIO_SPI1_MISO_1     /* PA6 */
+#define GPIO_SPI1_MOSI GPIO_SPI1_MOSI_1     /* PA7 */
+//#define GPIO_SPI1_NSS  GPIO_SPI1_NSS_1      /* PD14 */
+
 /* SPI3 */
 
 #define GPIO_SPI3_MISO GPIO_SPI3_MISO_1 /* PB4 */

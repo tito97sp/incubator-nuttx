@@ -159,3 +159,31 @@ Configurations
 
     This configuration provides a basic NuttShell configuration (NSH)
     for the Nucleo-H743ZI.  The default console is the VCOM on USART3.
+
+
+
+SDCard support:
+===============
+
+  Its posible to use SDCard over SPI.
+
+  You can do that enabling these options:
+
+    CONFIG_FS_FAT=y
+
+    CONFIG_MMCSD=y
+    CONFIG_MMCSD_NSLOTS=1
+    CONFIG_MMCSD_SPI=y
+    CONFIG_MMCSD_SPICLOCK=20000000
+    CONFIG_MMCSD_SPIMODE=0
+
+    CONFIG_STM32_SPI=y
+    CONFIG_STM32_SPI1=y
+
+    CONFIG_SPI=y
+    CONFIG_SPI_CALLBACK=y
+    CONFIG_SPI_EXCHANGE=y
+
+  And connect a SDCard/SPI board on SPI1. Connect the CS pin to PD14, SCK to
+  PA5, MOSI to PA7 and MISO to PA6. Note: some chinese boards use MOSO instead
+  of MISO.
