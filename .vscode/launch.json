@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+           {
+            "name": "Debug (OpenOCD/Nuttx)",
+            "cwd": "${workspaceRoot}",
+            "executable": "nuttx",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "device": "stm32h7x",
+            "svdFile": "STM32H743x.svd",
+            "gdbPath": "/usr/bin/arm-none-eabi-gdb",
+            "showDevDebugOutput": true,
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32h7x.cfg"
+            ]
+        }
+    ]
+}
