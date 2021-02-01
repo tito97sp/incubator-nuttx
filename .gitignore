@@ -3,6 +3,7 @@
 *.asm
 *.bin
 *.d
+!*.d/
 *.dSYM
 *.elf
 *.exe
@@ -26,7 +27,6 @@
 /.clean_context
 /.config
 /.config.old
-/.config-e
 /.cproject
 /.gdbinit
 /.project
@@ -34,7 +34,6 @@
 /_SAVED_APPS_config
 /cscope.*
 /defconfig
-/defconfig.tmp-e
 /Make.defs
 /nuttx
 /nuttx-*
@@ -45,3 +44,4 @@
 core
 Make*.dep
 uImage
+/external

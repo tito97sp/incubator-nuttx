@@ -35,7 +35,7 @@
 
 # Common file/socket descriptor support
 
-CSRCS += fs_close.c fs_dup.c fs_dup2.c fs_fcntl.c fs_dupfd.c fs_dupfd2.c
+CSRCS += fs_close.c fs_dup.c fs_dup2.c fs_fcntl.c
 CSRCS += fs_epoll.c fs_fstat.c fs_fstatfs.c fs_getfilep.c fs_ioctl.c
 CSRCS += fs_lseek.c fs_mkdir.c fs_open.c fs_poll.c  fs_read.c fs_rename.c
 CSRCS += fs_rmdir.c fs_statfs.c fs_stat.c fs_select.c fs_unlink.c fs_write.c
@@ -51,12 +51,12 @@ endif
 CSRCS += fs_pread.c fs_pwrite.c
 
 ifneq ($(CONFIG_PSEUDOFS_SOFTLINKS),0)
-CSRCS += fs_link.c fs_readlink.c
+CSRCS += fs_symlink.c fs_readlink.c
 endif
 
 # Stream support
 
-ifneq ($(CONFIG_NFILE_STREAMS),0)
+ifeq ($(CONFIG_FILE_STREAM),y)
 CSRCS += fs_fdopen.c
 endif
 
@@ -64,6 +64,12 @@ endif
 
 ifeq ($(CONFIG_NET_SENDFILE),y)
 CSRCS += fs_sendfile.c
+endif
+
+# Support for eventfd
+
+ifeq ($(CONFIG_EVENT_FD),y)
+CSRCS += fs_eventfd.c
 endif
 
 # Include vfs build support

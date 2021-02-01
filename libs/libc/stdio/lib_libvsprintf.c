@@ -42,7 +42,6 @@
 
 #include <nuttx/config.h>
 
-#include <sys/types.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -132,7 +131,7 @@ struct arg
 #ifdef CONFIG_LIBC_LONG_LONG
     unsigned long long ull;
 #endif
-    double_t d;
+    double d;
     FAR char *cp;
   } value;
 };
@@ -376,7 +375,9 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
                 }
             }
 
-          if (c == 'z')
+          /* Note: On Nuttx, ptrdiff_t == intptr_t == ssize_t. */
+
+          if (c == 'z' || c == 't')
             {
               switch (sizeof(size_t))
                 {
@@ -541,7 +542,7 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
         }
       else if (c >= 'e' && c <= 'g')
         {
-          double_t value;
+          double value;
           int exp;              /* Exponent of master decimal digit */
           int n;
           uint8_t sign;         /* Sign character (or 0) */
@@ -590,10 +591,10 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
             }
           else
             {
-              value = va_arg(ap, double_t);
+              value = va_arg(ap, double);
             }
 #else
-          value = va_arg(ap, double_t);
+          value = va_arg(ap, double);
 #endif
 
           ndigs = __dtoa_engine(value, &_dtoa, ndigs,
@@ -859,7 +860,7 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
 #else /* !CONFIG_LIBC_FLOATINGPOINT */
       if ((c >= 'E' && c <= 'G') || (c >= 'e' && c <= 'g'))
         {
-          va_arg(ap, double_t);
+          va_arg(ap, double);
           pnt  = "*float*";
           size = sizeof("*float*") - 1;
           goto str_lpad;
@@ -1274,7 +1275,7 @@ int lib_vsprintf(FAR struct lib_outstream_s *stream,
           break;
 
         case TYPE_DOUBLE:
-          arglist[i].value.d = va_arg(ap, double_t);
+          arglist[i].value.d = va_arg(ap, double);
           break;
 
         case TYPE_CHAR_POINTER:

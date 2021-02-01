@@ -65,9 +65,15 @@
 
 void up_exit(int status)
 {
-  FAR struct tcb_s *tcb = this_task();
+  FAR struct tcb_s *tcb;
 
-  sinfo("TCB=%p exiting\n", tcb);
+  /* Make sure that we are in a critical section with local interrupts.
+   * The IRQ state will be restored when the next task is started.
+   */
+
+  enter_critical_section();
+
+  sinfo("TCB=%p exiting\n", this_task());
 
   /* Destroy the task at the head of the ready to run list. */
 
@@ -79,6 +85,12 @@ void up_exit(int status)
 
   tcb = this_task();
   sinfo("New Active Task TCB=%p\n", tcb);
+
+  /* Adjusts time slice for SCHED_RR & SCHED_SPORADIC cases
+   * NOTE: the API also adjusts the global IRQ control for SMP
+   */
+
+  nxsched_resume_scheduler(tcb);
 
   /* The way that we handle signals in the simulation is kind of
    * a kludge.  This would be unsafe in a truly multi-threaded, interrupt
@@ -95,4 +107,8 @@ void up_exit(int status)
   /* Then switch contexts */
 
   up_longjmp(tcb->xcp.regs, 1);
+
+  /* The function does not return */
+
+  for (; ; );
 }

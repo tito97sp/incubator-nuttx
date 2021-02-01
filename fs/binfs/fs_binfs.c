@@ -67,11 +67,14 @@
 static int     binfs_open(FAR struct file *filep, const char *relpath,
                           int oflags, mode_t mode);
 static int     binfs_close(FAR struct file *filep);
-static ssize_t binfs_read(FAR struct file *filep, char *buffer, size_t buflen);
-static int     binfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
+static ssize_t binfs_read(FAR struct file *filep,
+                          char *buffer, size_t buflen);
+static int     binfs_ioctl(FAR struct file *filep,
+                           int cmd, unsigned long arg);
 
 static int     binfs_dup(FAR const struct file *oldp, FAR struct file *newp);
-static int     binfs_fstat(FAR const struct file *filep, FAR struct stat *buf);
+static int     binfs_fstat(FAR const struct file *filep,
+                           FAR struct stat *buf);
 
 static int     binfs_opendir(struct inode *mountpt, const char *relpath,
                              struct fs_dirent_s *dir);
@@ -185,11 +188,13 @@ static int binfs_close(FAR struct file *filep)
  * Name: binfs_read
  ****************************************************************************/
 
-static ssize_t binfs_read(FAR struct file *filep, char *buffer, size_t buflen)
+static ssize_t binfs_read(FAR struct file *filep,
+                          char *buffer, size_t buflen)
 {
   /* Reading is not supported.  Just return end-of-file */
 
-  finfo("Read %d bytes from offset %d\n", buflen, filep->f_pos);
+  finfo("Read %zu bytes from offset %jd\n",
+        buflen, (intmax_t)filep->f_pos);
   return 0;
 }
 
@@ -329,7 +334,7 @@ static int binfs_readdir(struct inode *mountpt, struct fs_dirent_s *dir)
 
       finfo("Entry %d: \"%s\"\n", index, name);
       dir->fd_dir.d_type = DTYPE_FILE;
-      strncpy(dir->fd_dir.d_name, name, NAME_MAX + 1);
+      strncpy(dir->fd_dir.d_name, name, NAME_MAX);
 
       /* The application list is terminated by an entry with a NULL name.
        * Therefore, there is at least one more entry in the list.
@@ -426,7 +431,8 @@ static int binfs_statfs(struct inode *mountpt, struct statfs *buf)
  *
  ****************************************************************************/
 
-static int binfs_stat(struct inode *mountpt, const char *relpath, struct stat *buf)
+static int binfs_stat(struct inode *mountpt,
+                      const char *relpath, struct stat *buf)
 {
   finfo("Entry\n");
 

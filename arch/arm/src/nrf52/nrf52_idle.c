@@ -153,7 +153,7 @@ static void up_idlepm(void)
  * Name: up_idle
  *
  * Description:
- *   up_idle() is the logic that will be executed when their is no other
+ *   up_idle() is the logic that will be executed when there is no other
  *   ready-to-run task.  This is processor idle time and will continue until
  *   some interrupt occurs to cause a context switch from the idle task.
  *
@@ -178,11 +178,11 @@ void up_idle(void)
 
   /* Sleep until an interrupt occurs to save power
    *
-   * REVISIT: The SysTick's clock will only tick when the CPU is
+   * The SysTick's clock will only tick when the CPU is
    * running (not in WFE/WFI) or when the system is in debug interface mode.
    */
 
-#if 0
+#ifdef CONFIG_NRF52_SYSTIMER_RTC
   BEGIN_IDLE();
   asm("WFI");
   END_IDLE();

@@ -119,7 +119,7 @@ static bool max326_havesettime(FAR struct rtc_lowerhalf_s *lower);
 static int max326_setalarm(FAR struct rtc_lowerhalf_s *lower,
                            FAR const struct lower_setalarm_s *alarminfo);
 static int max326_setrelative(FAR struct rtc_lowerhalf_s *lower,
-                             FAR const struct lower_setrelative_s *alarminfo);
+                           FAR const struct lower_setrelative_s *alarminfo);
 static int max326_cancelalarm(FAR struct rtc_lowerhalf_s *lower,
                              int alarmid);
 static int max326_rdalarm(FAR struct rtc_lowerhalf_s *lower,
@@ -128,7 +128,7 @@ static int max326_rdalarm(FAR struct rtc_lowerhalf_s *lower,
 
 #ifdef CONFIG_RTC_PERIODIC
 static int max326_setperiodic(FAR struct rtc_lowerhalf_s *lower,
-                             FAR const struct lower_setperiodic_s *alarminfo);
+                           FAR const struct lower_setperiodic_s *alarminfo);
 static int max326_cancelperiodic(FAR struct rtc_lowerhalf_s *lower, int id);
 #endif
 
@@ -255,7 +255,7 @@ static int max326_rdtime(FAR struct rtc_lowerhalf_s *lower,
   ret = up_rtc_gettime(&ts);
   if (ret < 0)
     {
-      goto errout_with_errno;
+      goto errout;
     }
 
   /* Convert the one second epoch time to a struct tm.  This operation
@@ -265,15 +265,15 @@ static int max326_rdtime(FAR struct rtc_lowerhalf_s *lower,
 
   if (!gmtime_r(&ts.tv_sec, (FAR struct tm *)rtctime))
     {
-      goto errout_with_errno;
+      ret = -get_errno();
+      goto errout;
     }
 
   return OK;
 
-errout_with_errno:
-  ret = get_errno();
-  DEBUGASSERT(ret > 0);
-  return -ret;
+errout:
+  DEBUGASSERT(ret < 0);
+  return ret;
 
 #else
   time_t timer;
@@ -598,15 +598,11 @@ static int max326_rdalarm(FAR struct rtc_lowerhalf_s *lower,
         {
           /* Extract integer seconds from the b32_t value */
 
-           time_t sec = (time_t)(b32toi(ftime));
+          time_t sec = (time_t)(b32toi(ftime));
 
-           /* Convert to struct rtc_time (aka struct tm) */
+          /* Convert to struct rtc_time (aka struct tm) */
 
-#ifdef CONFIG_LIBC_LOCALTIME
           localtime_r(&sec, (FAR struct tm *)alarminfo->time);
-#else
-          gmtime_r(&sec, (FAR struct tm *)alarminfo->time);
-#endif
           ret = OK;
         }
     }
@@ -619,8 +615,9 @@ static int max326_rdalarm(FAR struct rtc_lowerhalf_s *lower,
  * Name: max326_periodic_callback
  *
  * Description:
- *   This is the function that is called from the RTC driver when the periodic
- *   wakeup goes off.  It just invokes the upper half drivers callback.
+ *   This is the function that is called from the RTC driver when the
+ *   periodic wakeup goes off. It just invokes the upper half drivers
+ *   callback.
  *
  * Input Parameters:
  *   None

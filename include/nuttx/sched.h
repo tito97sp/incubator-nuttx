@@ -33,7 +33,6 @@
 #include <signal.h>
 #include <semaphore.h>
 #include <pthread.h>
-#include <mqueue.h>
 #include <time.h>
 
 #include <nuttx/clock.h>
@@ -103,10 +102,9 @@
 #  define TCB_FLAG_SCHED_SPORADIC  (2 << TCB_FLAG_POLICY_SHIFT)  /* Sporadic scheding policy */
 #  define TCB_FLAG_SCHED_OTHER     (3 << TCB_FLAG_POLICY_SHIFT)  /* Other scheding policy */
 #define TCB_FLAG_CPU_LOCKED        (1 << 7)                      /* Bit 7: Locked to this CPU */
-#define TCB_FLAG_CUSTOM_STACK      (1 << 8)                      /* Bit 8: Thread uses a custom stack */
-#define TCB_FLAG_SIGNAL_ACTION     (1 << 9)                      /* Bit 9: In a signal handler */
-#define TCB_FLAG_SYSCALL           (1 << 10)                     /* Bit 10: In a system call */
-#define TCB_FLAG_EXIT_PROCESSING   (1 << 11)                     /* Bit 11: Exitting */
+#define TCB_FLAG_SIGNAL_ACTION     (1 << 8)                      /* Bit 8: In a signal handler */
+#define TCB_FLAG_SYSCALL           (1 << 9)                      /* Bit 9: In a system call */
+#define TCB_FLAG_EXIT_PROCESSING   (1 << 10)                     /* Bit 10: Exitting */
                                                                  /* Bits 11-15: Available */
 
 /* Values for struct task_group tg_flags */
@@ -283,7 +281,7 @@ struct sporadic_s;
 struct replenishment_s
 {
   FAR struct tcb_s *tcb;            /* The parent TCB structure                 */
-  WDOG_ID timer;                    /* Timer dedicated to this interval         */
+  struct wdog_s timer;              /* Timer dedicated to this interval         */
   uint32_t budget;                  /* Current budget time                      */
   uint8_t  flags;                   /* See SPORADIC_FLAG_* definitions          */
 };
@@ -581,7 +579,7 @@ struct task_group_s
 
   struct filelist tg_filelist;      /* Maps file descriptor to file             */
 
-#if CONFIG_NFILE_STREAMS > 0
+#ifdef CONFIG_FILE_STREAM
   /* FILE streams ***************************************************************/
 
   /* In a flat, single-heap build.  The stream list is allocated with this
@@ -600,12 +598,6 @@ struct task_group_s
   /* Sockets ********************************************************************/
 
   struct socketlist tg_socketlist;  /* Maps socket descriptor to socket         */
-#endif
-
-#ifndef CONFIG_DISABLE_MQUEUE
-  /* POSIX Named Message Queue Fields *******************************************/
-
-  sq_queue_t tg_msgdesq;            /* List of opened message queues           */
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV
@@ -678,7 +670,7 @@ struct tcb_s
   FAR struct sporadic_s *sporadic;       /* Sporadic scheduling parameters      */
 #endif
 
-  WDOG_ID waitdog;                       /* All timed waits use this timer      */
+  struct wdog_s waitdog;                 /* All timed waits use this timer      */
 
   /* Stack-Related Fields *******************************************************/
 
@@ -712,6 +704,23 @@ struct tcb_s
 
 #ifndef CONFIG_DISABLE_MQUEUE
   FAR struct mqueue_inode_s *msgwaitq;   /* Waiting for this message queue      */
+#endif
+
+  /* Robust mutex support *******************************************************/
+
+#if !defined(CONFIG_DISABLE_PTHREAD) && !defined(CONFIG_PTHREAD_MUTEX_UNSAFE)
+  FAR struct pthread_mutex_s *mhead;     /* List of mutexes held by thread      */
+#endif
+
+  /* Clean-up stack *************************************************************/
+
+#ifdef CONFIG_PTHREAD_CLEANUP
+  /* tos   - The index to the next available entry at the top of the stack.
+   * stack - The pre-allocated clean-up stack memory.
+   */
+
+  uint8_t tos;
+  struct pthread_cleanup_s stack[CONFIG_PTHREAD_CLEANUP_STACKSIZE];
 #endif
 
   /* Pre-emption monitor support ************************************************/
@@ -785,23 +794,6 @@ struct pthread_tcb_s
 
   pthread_addr_t arg;                    /* Startup argument                    */
   FAR void *joininfo;                    /* Detach-able info to support join    */
-
-  /* Robust mutex support *******************************************************/
-
-#ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
-  FAR struct pthread_mutex_s *mhead;     /* List of mutexes held by thread      */
-#endif
-
-  /* Clean-up stack *************************************************************/
-
-#ifdef CONFIG_PTHREAD_CLEANUP
-  /* tos   - The index to the next available entry at the top of the stack.
-   * stack - The pre-allocated clean-up stack memory.
-   */
-
-  uint8_t tos;
-  struct pthread_cleanup_s stack[CONFIG_PTHREAD_CLEANUP_STACKSIZE];
-#endif
 };
 #endif /* !CONFIG_DISABLE_PTHREAD */
 
@@ -914,9 +906,9 @@ int nxsched_release_tcb(FAR struct tcb_s *tcb, uint8_t ttype);
  */
 
 FAR struct filelist *nxsched_get_files(void);
-#if CONFIG_NFILE_STREAMS > 0
+#ifdef CONFIG_FILE_STREAM
 FAR struct streamlist *nxsched_get_streams(void);
-#endif /* CONFIG_NFILE_STREAMS */
+#endif /* CONFIG_FILE_STREAM */
 
 #ifdef CONFIG_NET
 FAR struct socketlist *nxsched_get_sockets(void);
@@ -939,9 +931,6 @@ FAR struct socketlist *nxsched_get_sockets(void);
  *   nature of the created task.  For example:
  *
  *     - Task type may be set in the TCB flags to create kernel thread
- *     - If a custom stack is used, i.e., one allocated, managed, and freed
- *       by the caller, then TCB_FLAG_CUSTOM_STACK should be set in the
- *       TCB flags.
  *
  * Input Parameters:
  *   tcb        - Address of the new task's TCB
@@ -963,8 +952,8 @@ FAR struct socketlist *nxsched_get_sockets(void);
  *
  ********************************************************************************/
 
-int nxtask_init(FAR struct tcb_s *tcb, const char *name, int priority,
-                FAR uint32_t *stack, uint32_t stack_size, main_t entry,
+int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
+                FAR void *stack, uint32_t stack_size, main_t entry,
                 FAR char * const argv[]);
 
 /********************************************************************************
@@ -977,8 +966,6 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, int priority,
  *   was when a subsequent call to task_activate fails.
  *
  *   Caution:  Freeing of the TCB itself might be an unexpected side-effect.
- *   The stack will also be freed UNLESS TCB_FLAG_CUSTOM_STACK was set in
- *   in the tcb->flags field when nxtask_init() was called.
  *
  * Input Parameters:
  *   tcb - Address of the TCB initialized by task_init()
@@ -988,7 +975,7 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, int priority,
  *
  ********************************************************************************/
 
-void nxtask_uninit(FAR struct tcb_s *tcb);
+void nxtask_uninit(FAR struct task_tcb_s *tcb);
 
 /********************************************************************************
  * Name: nxtask_activate
@@ -1031,6 +1018,26 @@ void nxtask_activate(FAR struct tcb_s *tcb);
 #ifdef CONFIG_SCHED_STARTHOOK
 void nxtask_starthook(FAR struct task_tcb_s *tcb, starthook_t starthook,
                       FAR void *arg);
+#endif
+
+/********************************************************************************
+ * Name: nxtask_startup
+ *
+ * Description:
+ *   This function is the user-space, task startup function.  It is called
+ *   from up_task_start() in user-mode.
+ *
+ * Input Parameters:
+ *   entrypt - The user-space address of the task entry point
+ *   argc and argv - Standard arguments for the task entry point
+ *
+ * Returned Value:
+ *   None.  This function does not return.
+ *
+ ********************************************************************************/
+
+#ifndef CONFIG_BUILD_KERNEL
+void nxtask_startup(main_t entrypt, int argc, FAR char *argv[]);
 #endif
 
 /********************************************************************************

@@ -66,8 +66,8 @@
 static void _up_dumponexit(FAR struct tcb_s *tcb, FAR void *arg)
 {
   FAR struct filelist *filelist;
-#if CONFIG_NFILE_STREAMS > 0
-  FAR struct streamlist *streamlist;
+#ifdef CONFIG_FILE_STREAM
+  FAR struct file_struct *filep;
 #endif
   int i;
 
@@ -85,11 +85,10 @@ static void _up_dumponexit(FAR struct tcb_s *tcb, FAR void *arg)
         }
     }
 
-#if CONFIG_NFILE_STREAMS > 0
-  streamlist = tcb->group->tg_streamlist;
-  for (i = 0; i < CONFIG_NFILE_STREAMS; i++)
+#ifdef CONFIG_FILE_STREAM
+  filep = tcb->group->tg_streamlist->sl_head;
+  for (; filep != NULL; filep = filep->fs_next)
     {
-      struct file_struct *filep = &streamlist->sl_streams[i];
       if (filep->fs_fd >= 0)
         {
 #ifndef CONFIG_STDIO_DISABLE_BUFFERING
@@ -152,6 +151,10 @@ void up_exit(int status)
 
   tcb = this_task();
   sinfo("New Active Task TCB=%p\n", tcb);
+
+  /* Adjusts time slice for SCHED_RR & SCHED_SPORADIC cases */
+
+  nxsched_resume_scheduler(tcb);
 
 #ifdef CONFIG_ARCH_ADDRENV
   /* Make sure that the address environment for the previously running

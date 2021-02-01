@@ -41,9 +41,7 @@
 
 #include <nuttx/compiler.h>
 
-#include <sys/types.h>
-
-#include <sys/types.h>
+#include <math.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -333,6 +331,15 @@ int lib_vscanf(FAR struct lib_instream_s *obj, FAR int *lastc,
                       modifier = LL_MOD;
                       fmt++;
                     }
+                }
+              else if (fmt_char(fmt) == 'j')
+                {
+                  /* Same as long long if available. Otherwise, long. */
+#ifdef CONFIG_LIBC_LONG_LONG
+                  modifier = LL_MOD;
+#else
+                  modifier = L_MOD;
+#endif
                 }
               else if (fmt_char(fmt) == 'h' || fmt_char(fmt) == 'H')
                 {
@@ -920,7 +927,7 @@ int lib_vscanf(FAR struct lib_instream_s *obj, FAR int *lastc,
           else if (strchr("aAfFeEgG", fmt_char(fmt)) != NULL)
             {
 #ifdef CONFIG_HAVE_DOUBLE
-              FAR double_t *pd = NULL;
+              FAR double *pd = NULL;
 #endif
               FAR float *pf = NULL;
 
@@ -940,7 +947,7 @@ int lib_vscanf(FAR struct lib_instream_s *obj, FAR int *lastc,
 #ifdef CONFIG_HAVE_DOUBLE
                   if (modifier >= L_MOD)
                     {
-                      pd = va_arg(ap, FAR double_t *);
+                      pd = va_arg(ap, FAR double *);
                       *pd = 0.0;
                     }
                   else
@@ -973,7 +980,7 @@ int lib_vscanf(FAR struct lib_instream_s *obj, FAR int *lastc,
                   bool stopconv;
                   int errsave;
 #  ifdef CONFIG_HAVE_DOUBLE
-                  double_t dvalue;
+                  double dvalue;
 #  endif
                   float fvalue;
 
@@ -1059,7 +1066,7 @@ int lib_vscanf(FAR struct lib_instream_s *obj, FAR int *lastc,
 #  ifdef CONFIG_HAVE_DOUBLE
                   if (modifier >= L_MOD)
                     {
-                      /* Get the converted double_t value */
+                      /* Get the converted double value */
 
                       dvalue = strtod(tmp, &endptr);
                     }
@@ -1082,13 +1089,13 @@ int lib_vscanf(FAR struct lib_instream_s *obj, FAR int *lastc,
                   if (!noassign)
                     {
                       /* We have to check whether we need to return a float
-                       * or a double_t.
+                       * or a double.
                        */
 
 #  ifdef CONFIG_HAVE_DOUBLE
                       if (modifier >= L_MOD)
                         {
-                          /* Return the double_t value */
+                          /* Return the double value */
 
                           linfo("Return %f to %p\n", dvalue, pd);
                           *pd = dvalue;
@@ -1098,7 +1105,7 @@ int lib_vscanf(FAR struct lib_instream_s *obj, FAR int *lastc,
                         {
                           /* Return the float value */
 
-                          linfo("Return %f to %p\n", (double_t)fvalue, pf);
+                          linfo("Return %f to %p\n", (double)fvalue, pf);
                           *pf = fvalue;
                         }
 

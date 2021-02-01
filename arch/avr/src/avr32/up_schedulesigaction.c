@@ -62,7 +62,7 @@
  *   This function is called by the OS when one or more
  *   signal handling actions have been queued for execution.
  *   The architecture specific code must configure things so
- *   that the 'igdeliver' callback is executed on the thread
+ *   that the 'sigdeliver' callback is executed on the thread
  *   specified by 'tcb' as soon as possible.
  *
  *   This function may be called from interrupt handling logic.
@@ -86,17 +86,14 @@
  *       currently executing task -- just call the signal
  *       handler now.
  *
+ * Assumptions:
+ *   Called from critical section
+ *
  ****************************************************************************/
 
 void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 {
-  irqstate_t flags;
-
   sinfo("tcb=0x%p sigdeliver=0x%p\n", tcb, sigdeliver);
-
-  /* Make sure that interrupts are disabled */
-
-  flags = enter_critical_section();
 
   /* Refuse to handle nested signal actions */
 
@@ -136,9 +133,9 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
           else
             {
-              /* Save registers that must be protected while the signal handler
-               * runs. These will be restored by the signal trampoline after
-               * the signal(s) have been delivered.
+              /* Save registers that must be protected while the signal
+               * handler runs. These will be restored by the signal
+               * trampoline after the signal(s) have been delivered.
                */
 
               tcb->xcp.sigdeliver   = sigdeliver;
@@ -185,6 +182,4 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
           tcb->xcp.regs[REG_SR]    |= AVR32_SR_GM_MASK;
         }
     }
-
-  leave_critical_section(flags);
 }

@@ -47,6 +47,7 @@
 #include <sys/types.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <time.h>
 
 #include <nuttx/list.h>
 #include <nuttx/fs/fs.h>
@@ -113,8 +114,23 @@
 /* Ioctl commands supported by the upper half CAN driver.
  *
  * CANIOC_RTR:
- *   Description:  Send the remote transmission request and wait for the response.
- *   Argument:     A reference to struct canioc_rtr_s
+ *   Description:    Send the given message as a remote request. On sucessful
+ *                   return, the passed message structure is updated with
+ *                   the contents of the received message; i.e. the message
+ *                   ID and the standard/extended ID indication bit stay the
+ *                   same, but the DLC and data bits are updated with the
+ *                   contents of the received message. If no response is
+ *                   received after the specified timeout, ioctl will return.
+ *
+ *                   Note: Lower-half drivers that do not implement
+ *                         CONFIG_CAN_USE_RTR and implement co_remoterequest
+ *                         will result in EINVAL if this ioctl is called
+ *                         with an extended-ID message.
+ *
+ *   Argument:       A pointer to struct canioc_rtr_s
+ *   Returned Value: Zero (OK) is returned on success. Otherwise, -1 (ERROR)
+ *                   is returned with the errno variable set to indicate the
+ *                   nature of the error (for example, ETIMEDOUT)
  *
  * Ioctl commands that may or may not be supported by the lower half CAN driver.
  *
@@ -197,6 +213,24 @@
  *                   is returned with the errno variable set to indicate the
  *                   nature of the error.
  *   Dependencies:   None
+ *
+ * CANIOC_SET_NART:
+ *   Description:    Enable/Disable NART (No Automatic Retry)
+ *   Argument:       Set to 1 to enable NART, 0 to disable. Default is
+ *                   disabled.
+ *   Returned Value: Zero (OK) is returned on success.  Otherwise -1 (ERROR)
+ *                   is returned with the errno variable set to indicate the
+ *                   nature of the error.
+ *   Dependencies:   None
+ *
+ * CANIOC_SET_ABOM:
+ *   Description:    Enable/Disable ABOM (Automatic Bus-off Management)
+ *   Argument:       Set to 1 to enable ABOM, 0 to disable. Default is
+ *                   disabled.
+ *   Returned Value: Zero (OK) is returned on success.  Otherwise -1 (ERROR)
+ *                   is returned with the errno variable set to indicate the
+ *                   nature of the error.
+ *   Dependencies:   None
  */
 
 #define CANIOC_RTR                _CANIOC(1)
@@ -209,9 +243,11 @@
 #define CANIOC_GET_CONNMODES      _CANIOC(8)
 #define CANIOC_SET_CONNMODES      _CANIOC(9)
 #define CANIOC_BUSOFF_RECOVERY    _CANIOC(10)
+#define CANIOC_SET_NART           _CANIOC(11)
+#define CANIOC_SET_ABOM           _CANIOC(12)
 
 #define CAN_FIRST                 0x0001         /* First common command */
-#define CAN_NCMDS                 10             /* Ten common commands */
+#define CAN_NCMDS                 12             /* Ten common commands */
 
 /* User defined ioctl commands are also supported. These will be forwarded
  * by the upper-half CAN driver to the lower-half CAN driver via the co_ioctl()
@@ -482,8 +518,7 @@ struct can_txfifo_s
 
 struct can_rtrwait_s
 {
-  sem_t         cr_sem;                  /* Wait for RTR response */
-  uint16_t      cr_id;                   /* The ID that is waited for */
+  sem_t         cr_sem;                  /* Wait for response/is the cd_rtr entry available */
   FAR struct can_msg_s *cr_msg;          /* This is where the RTR response goes */
 };
 
@@ -527,7 +562,13 @@ struct can_ops_s
 
   CODE int (*co_ioctl)(FAR struct can_dev_s *dev, int cmd, unsigned long arg);
 
-  /* Send a remote request */
+  /* Send a remote request. Lower-half drivers should NOT implement this if
+   * they support sending RTR messages with the regular send function
+   * (i.e. CONFIG_CAN_USE_RTR). Instead, they should mention CAN_USE_RTR
+   * in their Kconfig help and set this to NULL to indicate that the normal
+   * send function should be used instead. Lower-half drivers must implement
+   * either this or CONFIG_CAN_USE_RTR to support CANIOC_RTR.
+   */
 
   CODE int (*co_remoterequest)(FAR struct can_dev_s *dev, uint16_t id);
 
@@ -560,17 +601,14 @@ struct can_ops_s
 struct can_reader_s
 {
   struct list_node     list;
-  sem_t                read_sem;
   struct can_rxfifo_s  fifo;             /* Describes receive FIFO */
 };
 
 struct can_dev_s
 {
-  uint8_t              cd_ocount;        /* The number of times the device has been opened */
   uint8_t              cd_npendrtr;      /* Number of pending RTR messages */
   volatile uint8_t     cd_ntxwaiters;    /* Number of threads waiting to enqueue a message */
-  volatile uint8_t     cd_nrxwaiters;    /* Number of threads waiting to receive a message */
-  struct list_node     cd_readers;       /* Number of readers */
+  struct list_node     cd_readers;       /* List of readers */
 #ifdef CONFIG_CAN_ERRORS
   uint8_t              cd_error;         /* Flags to indicate internal device errors */
 #endif
@@ -594,8 +632,21 @@ struct can_dev_s
 
 struct canioc_rtr_s
 {
-  uint16_t              ci_id;           /* The 11-bit ID to use in the RTR message */
-  FAR struct can_msg_s *ci_msg;          /* The location to return the RTR response */
+  /* How long to wait for the response */
+
+  struct timespec       ci_timeout;
+
+  /* The location to return the RTR response. The arbitration fields
+   * (i.e. message ID and extended ID indication, if applicable) should be
+   * set to the values the driver will watch for. On return from the ioctl,
+   * the DLC and data fields will be updated by the received message.
+   *
+   * The block of memory must be large enough to hold an message of size
+   * CAN_MSGLEN(CAN_MAXDATALEN) even if a smaller DLC is requested, since
+   * the response DLC may not match the requested one.
+   */
+
+  FAR struct can_msg_s *ci_msg;
 };
 
 /* CANIOC_GET_BITTIMING/CANIOC_SET_BITTIMING:
@@ -624,7 +675,7 @@ struct canioc_bittiming_s
 struct canioc_connmodes_s
 {
   uint8_t               bm_loopback : 1; /* Enable reception of messages sent
-                                          * by this node.*/
+                                          * by this node. */
   uint8_t               bm_silent   : 1; /* Disable transmission of messages.
                                           * The node still receives messages. */
 };

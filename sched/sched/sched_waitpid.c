@@ -72,9 +72,17 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
 
   DEBUGASSERT(stat_loc);
 
+  /* NOTE: sched_lock() is not enough for SMP
+   * because the child task is running on another CPU
+   */
+
+#ifdef CONFIG_SMP
+  irqstate_t flags = enter_critical_section();
+#else
   /* Disable pre-emption so that nothing changes in the following tests */
 
   sched_lock();
+#endif
 
   /* Get the TCB corresponding to this PID */
 
@@ -158,17 +166,22 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
 
   /* On success, return the PID */
 
-  sched_unlock();
-  return pid;
+  ret = pid;
 
 errout:
+
+#ifdef CONFIG_SMP
+  leave_critical_section(flags);
+#else
   sched_unlock();
+#endif
+
   return ret;
 }
 
 /****************************************************************************
  *
- * If CONFIG_SCHED_HAVE_PARENT is defined, then waitpid will use the SIGHCLD
+ * If CONFIG_SCHED_HAVE_PARENT is defined, then waitpid will use the SIGCHLD
  * signal.  It can also handle the pid == (pid_t)-1 argument.  This is
  * slightly more spec-compliant.
  *
@@ -199,9 +212,17 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
   sigemptyset(&set);
   nxsig_addset(&set, SIGCHLD);
 
+  /* NOTE: sched_lock() is not enough for SMP
+   * because the child task is running on another CPU
+   */
+
+#ifdef CONFIG_SMP
+  irqstate_t flags = enter_critical_section();
+#else
   /* Disable pre-emption so that nothing changes while the loop executes */
 
   sched_lock();
+#endif
 
   /* Verify that this task actually has children and that the requested PID
    * is actually a child of this task.
@@ -312,6 +333,7 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
               /* The child has exited. Return the saved exit status */
 
               *stat_loc = child->ch_status << 8;
+              pid = child->ch_pid;
 
               /* Discard the child entry and break out of the loop */
 
@@ -377,7 +399,7 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
        */
 
       if (rtcb->group->tg_nchildren == 0 ||
-          (pid != (pid_t)-1 && (ret = nxsig_kill(pid, 0)) < 0))
+          (pid != (pid_t)-1 && nxsig_kill(pid, 0) < 0))
         {
           /* We know that the child task was running okay when we started,
            * so we must have lost the signal.  What can we do?
@@ -389,6 +411,12 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
         }
 
 #endif /* CONFIG_SCHED_CHILD_STATUS */
+
+      if ((options & WNOHANG) != 0)
+        {
+          pid = 0;
+          break;
+        }
 
       /* Wait for any death-of-child signal */
 
@@ -415,7 +443,7 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
             {
               /* Recover the exiting child */
 
-              child = group_exit_child(rtcb->group);
+              child = group_find_child(rtcb->group, info.si_pid);
               DEBUGASSERT(child != NULL);
 
               /* Discard the child entry, if we have one */
@@ -432,11 +460,18 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
         }
     }
 
-  sched_unlock();
-  return pid;
+  /* On success, return the PID */
+
+  ret = pid;
 
 errout:
+
+#ifdef CONFIG_SMP
+  leave_critical_section(flags);
+#else
   sched_unlock();
+#endif
+
   return ret;
 }
 #endif /* CONFIG_SCHED_HAVE_PARENT */

@@ -37,8 +37,6 @@
  * Included Files
  ****************************************************************************/
 
-#define _GNU_SOURCE 1
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
@@ -55,7 +53,7 @@
 #include "hostfs.h"
 
 /****************************************************************************
- * Public Functions
+ * Private Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -66,35 +64,47 @@ static void host_stat_convert(struct stat *hostbuf, struct nuttx_stat_s *buf)
 {
   /* Map the return values */
 
-  buf->st_mode = hostbuf->st_mode & 0777;
+  buf->st_mode = hostbuf->st_mode & 07777;
 
-  if (hostbuf->st_mode & S_IFDIR)
+  if (S_ISDIR(hostbuf->st_mode))
     {
       buf->st_mode |= NUTTX_S_IFDIR;
     }
-  else if (hostbuf->st_mode & S_IFREG)
+  else if (S_ISREG(hostbuf->st_mode))
     {
       buf->st_mode |= NUTTX_S_IFREG;
     }
-  else if (hostbuf->st_mode & S_IFCHR)
+  else if (S_ISCHR(hostbuf->st_mode))
     {
       buf->st_mode |= NUTTX_S_IFCHR;
     }
-  else if (hostbuf->st_mode & S_IFBLK)
+  else if (S_ISBLK(hostbuf->st_mode))
     {
       buf->st_mode |= NUTTX_S_IFBLK;
     }
-  else if (hostbuf->st_mode & S_IFLNK)
+  else if (S_ISLNK(hostbuf->st_mode))
     {
       buf->st_mode |= NUTTX_S_IFLNK;
     }
-  else if (hostbuf->st_mode & S_IFIFO)
+  else if (S_ISFIFO(hostbuf->st_mode))
     {
       buf->st_mode |= NUTTX_S_IFIFO;
     }
-  else if (hostbuf->st_mode & S_IFSOCK)
+  else if (S_ISSOCK(hostbuf->st_mode))
     {
       buf->st_mode |= NUTTX_S_IFSOCK;
+    }
+  else if (S_TYPEISSEM(hostbuf))
+    {
+      buf->st_mode |= NUTTX_S_IFSEM;
+    }
+  else if (S_TYPEISMQ(hostbuf))
+    {
+      buf->st_mode |= NUTTX_S_IFMQ;
+    }
+  else if (S_TYPEISSHM(hostbuf))
+    {
+      buf->st_mode |= NUTTX_S_IFSHM;
     }
 
   buf->st_dev          = hostbuf->st_dev;
@@ -352,24 +362,11 @@ int host_readdir(void *dirp, struct nuttx_dirent_s *entry)
 {
   struct dirent *ent;
 
-  for (; ; )
+  /* Call the host's readdir routine */
+
+  ent = readdir(dirp);
+  if (ent != NULL)
     {
-      /* Call the host's readdir routine */
-
-      ent = readdir(dirp);
-      if (ent == NULL)
-        {
-          break;
-        }
-
-      /* Skip '.' and '..' */
-
-      if (ent->d_name[0] == '.' && (ent->d_name[1] == '\0' ||
-          (ent->d_name[1] == '.' && ent->d_name[2] == '\0')))
-        {
-          continue;
-        }
-
       /* Copy the entry name */
 
       strncpy(entry->d_name, ent->d_name, sizeof(entry->d_name) - 1);
@@ -377,10 +374,13 @@ int host_readdir(void *dirp, struct nuttx_dirent_s *entry)
 
       /* Map the type */
 
-      entry->d_type = 0;
       if (ent->d_type == DT_REG)
         {
           entry->d_type = NUTTX_DTYPE_FILE;
+        }
+      else if (ent->d_type == DT_FIFO)
+        {
+          entry->d_type = NUTTX_DTYPE_FIFO;
         }
       else if (ent->d_type == DT_CHR)
         {
@@ -397,6 +397,14 @@ int host_readdir(void *dirp, struct nuttx_dirent_s *entry)
       else if (ent->d_type == DT_LNK)
         {
           entry->d_type = NUTTX_DTYPE_LINK;
+        }
+      else if (ent->d_type == DT_SOCK)
+        {
+          entry->d_type = NUTTX_DTYPE_SOCK;
+        }
+      else
+        {
+          entry->d_type = NUTTX_DTYPE_UNKNOWN;
         }
 
       return 0;

@@ -117,6 +117,10 @@ static const struct sock_intf_s g_inet_sockif =
   inet_sendfile,    /* si_sendfile */
 #endif
   inet_recvfrom,    /* si_recvfrom */
+#ifdef CONFIG_NET_CMSG
+  NULL,             /* si_recvmsg */
+  NULL,             /* si_sendmsg */
+#endif
   inet_close        /* si_close */
 };
 
@@ -574,7 +578,7 @@ static int inet_getpeername(FAR struct socket *psock,
  *
  * Returned Value:
  *   On success, zero is returned. On error, a negated errno value is
- *   returned.  See list() for the set of appropriate error values.
+ *   returned.  See listen() for the set of appropriate error values.
  *
  ****************************************************************************/
 
@@ -804,7 +808,7 @@ static int inet_connect(FAR struct socket *psock,
  *
  * Returned Value:
  *   Returns 0 (OK) on success.  On failure, it returns a negated errno
- *   value.  See accept() for a desrciption of the appropriate error value.
+ *   value.  See accept() for a description of the appropriate error value.
  *
  * Assumptions:
  *   The network is locked.

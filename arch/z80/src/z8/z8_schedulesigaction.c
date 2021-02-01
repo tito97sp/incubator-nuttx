@@ -86,7 +86,7 @@ static void z8_sigsetup(FAR struct tcb_s *tcb, sig_deliver_t sigdeliver,
  *   This function is called by the OS when one or more
  *   signal handling actions have been queued for execution.
  *   The architecture specific code must configure things so
- *   that the 'igdeliver' callback is executed on the thread
+ *   that the 'sigdeliver' callback is executed on the thread
  *   specified by 'tcb' as soon as possible.
  *
  *   This function may be called from interrupt handling logic.
@@ -110,17 +110,14 @@ static void z8_sigsetup(FAR struct tcb_s *tcb, sig_deliver_t sigdeliver,
  *       currently executing task -- just call the signal
  *       handler now.
  *
+ * Assumptions:
+ *   Called from critical section
+ *
  ****************************************************************************/
 
 void up_schedule_sigaction(FAR struct tcb_s *tcb, sig_deliver_t sigdeliver)
 {
-  irqstate_t flags;
-
   sinfo("tcb=0x%p sigdeliver=0x%04x\n", tcb, (uint16_t)sigdeliver);
-
-  /* Make sure that interrupts are disabled */
-
-  flags = enter_critical_section();
 
   /* Refuse to handle nested signal actions */
 
@@ -151,7 +148,9 @@ void up_schedule_sigaction(FAR struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
           else
             {
-              /* Set up to vector to the trampoline with interrupts disabled. */
+              /* Set up to vector to the trampoline with interrupts
+               * disabled.
+               */
 
               z8_sigsetup(tcb, sigdeliver, IRQ_STATE());
 
@@ -163,18 +162,19 @@ void up_schedule_sigaction(FAR struct tcb_s *tcb, sig_deliver_t sigdeliver)
             }
         }
 
-      /* Otherwise, we are (1) signaling a task is not running from an interrupt
-       * handler or (2) we are not in an interrupt handler and the running task
-       * is signalling some non-running task.
+      /* Otherwise, we are (1) signaling a task is not running
+       * from an interrupt handler or (2) we are not in an
+       * interrupt handler and the running task is signalling
+       * some non-running task.
        */
 
       else
         {
-          /* Set up to vector to the trampoline with interrupts disabled. */
+          /* Set up to vector to the trampoline with interrupts
+           * disabled.
+           */
 
           z8_sigsetup(tcb, sigdeliver, tcb->xcp.regs);
         }
     }
-
-  leave_critical_section(flags);
 }

@@ -66,9 +66,8 @@
  *   tcb - tcb of the idle task.
  *
  * Returned Value:
- *   None
- *
- * Assumptions:
+ *   0 is returned on success; a negated errno value is returned on a
+ *   failure.
  *
  ****************************************************************************/
 
@@ -102,8 +101,8 @@ int group_setupidlefiles(FAR struct task_tcb_s *tcb)
     {
       /* Successfully opened /dev/console as stdin (fd == 0) */
 
-      fs_dupfd2(0, 1);
-      fs_dupfd2(0, 2);
+      nx_dup2(0, 1);
+      nx_dup2(0, 2);
     }
   else
     {
@@ -114,7 +113,7 @@ int group_setupidlefiles(FAR struct task_tcb_s *tcb)
       if (fd > 0)
         {
           sinfo("Open /dev/console fd: %d\n", fd);
-          close(fd);
+          nx_close(fd);
         }
       else
         {
@@ -127,7 +126,7 @@ int group_setupidlefiles(FAR struct task_tcb_s *tcb)
 
   /* Allocate file/socket streams for the TCB */
 
-#if CONFIG_NFILE_STREAMS > 0
+#ifdef CONFIG_FILE_STREAM
   return group_setupstreams(tcb);
 #else
   return OK;
