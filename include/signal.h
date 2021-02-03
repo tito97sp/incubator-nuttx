@@ -404,7 +404,7 @@ int  kill(pid_t pid, int signo);
 void psignal(int signum, FAR const char *message);
 void psiginfo(FAR const siginfo_t *pinfo, FAR const char *message);
 int  raise(int signo);
-int  sigaction(int signo, FAR const struct sigaction *act,
+int  sigaction(int signo, FAR const struct sigaction *act, 
                FAR struct sigaction *oact);
 int  sigaddset(FAR sigset_t *set, int signo);
 int  sigdelset(FAR sigset_t *set, int signo);
