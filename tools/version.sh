@@ -86,11 +86,7 @@ done
 OUTFILE=$1
 
 if [ -z ${VERSION} ] ; then
-<<<<<<< HEAD
-  VERSION=`git -C ${WD} tag --sort=taggerdate | tail -1 | cut -d'-' -f2`
-=======
   VERSION=`git -C ${WD} describe 2>/dev/null | tail -1 | cut -d'-' -f2`
->>>>>>> master
 
   # If the VERSION does not match X.Y.Z, retrieve version from the tag
 
